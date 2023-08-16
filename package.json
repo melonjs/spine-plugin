@@ -1,0 +1,77 @@
+{
+  "name": "@melonjs/spine-plugin",
+  "version": "1.0.0",
+  "description": "melonJS Spine plugin",
+  "type": "module",
+  "keywords": [
+    "2D",
+    "HTML5",
+    "javascript",
+    "TypeScript",
+    "es6",
+    "Canvas",
+    "WebGL",
+    "WebGL2",
+    "melonjs",
+    "Spine",
+    "esotericsoftware"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melonjs/debug-spine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/melonjs/debug-spine/issues"
+  },
+  "license": "MIT",
+  "author": "AltByte Pte Ltd",
+  "funding": "https://github.com/sponsors/melonjs",
+  "engines": {
+    "node": ">= 19"
+  },
+  "main": "dist/@melonjs/spine-plugin.js",
+  "module": "dist/@melonjs/spine-plugin.js",
+  "types": "dist/@melonjs/spine-plugin.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist/",
+    "src/",
+    "package.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "melonjs": "^15.9.0"
+  },
+  "dependencies": {
+    "@esotericsoftware/spine-canvas": "^4.2.18",
+    "@esotericsoftware/spine-core": "^4.2.18",
+    "@esotericsoftware/spine-webgl": "^4.2.18"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.22.0",
+    "@babel/plugin-syntax-import-assertions": "^7.22.5",
+    "@rollup/plugin-commonjs": "^25.0.4",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-replace": "^5.0.2",
+    "del-cli": "^5.0.0",
+    "eslint": "^8.47.0",
+    "eslint-plugin-jsdoc": "^46.4.6",
+    "rollup": "^3.28.0",
+    "rollup-plugin-bundle-size": "^1.0.3",
+    "typescript": "^5.1.6"
+  },
+  "scripts": {
+    "build": "npm run clean && npm run lint && rollup -c --silent && npm run types",
+    "lint": "eslint src/**.js rollup.config.mjs",
+    "serve": "python3 -m http.server",
+    "test": "npm run serve",
+    "prepublishOnly": "npm run build",
+    "clean": "del-cli --force dist/*",
+    "types": "tsc"
+  },
+  "homepage": "https://github.com/melonjs/debug-spine#readme",
+  "directories": {
+    "test": "test"
+  }
+}
