@@ -13,7 +13,7 @@ a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementati
 
 Installation
 -------------------------------------------------------------------------------
-this plugin is already bundled with the require Spine runtime, so there is no need to install it separately.
+this plugin is already bundled with the required Spine runtime, so there is no need to install it separately.
 >Note: this plugin requires melonJS version 15.9 or higher.
 
 To install the plugin using npm :
