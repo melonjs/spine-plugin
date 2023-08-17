@@ -29,8 +29,8 @@ Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
 
 // create new Spine Renderable
 export default class AlienSpine extends Spine {
-	constructor(x, y, settings ){
-		super(x, y, settings);
+    constructor(x, y, settings ){
+        super(x, y, settings);
         ...
     }
 }
