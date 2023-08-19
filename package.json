@@ -70,7 +70,7 @@
     "clean": "del-cli --force dist/*",
     "types": "tsc"
   },
-  "homepage": "https://github.com/melonjs/debug-spine#readme",
+  "homepage": "https://github.com/melonjs/spine-plugin#readme",
   "directories": {
     "test": "test"
   }
