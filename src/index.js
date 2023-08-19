@@ -183,12 +183,12 @@ export default class Spine extends Renderable {
         this.skeletonRenderer.draw(renderer, this.skeleton);
     }
 
-
     setAnimationByIndex(track_index, index, loop = false) {
-        if (index < 0 || index >= this.skeleton.data.animations.length)
-            { return (console.log("Animation Index not found")); }
-        else
-            { this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop); }
+        if (index < 0 || index >= this.skeleton.data.animations.length) {
+            return (console.log("Animation Index not found"));
+        } else { 
+            this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
+        }
     }
 
     setAnimation(track_index, name, loop = false) {
@@ -196,10 +196,11 @@ export default class Spine extends Renderable {
     }
 
     addAnimationByIndex(track_index, index, loop = false, delay = 0) {
-        if (index < 0 || index >= this.skeleton.data.animations.length)
-            { return (console.log("Animation Index not found")); }
-        else
-            { this.animationState.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay); }
+        if (index < 0 || index >= this.skeleton.data.animations.length) {
+            return (console.log("Animation Index not found"));
+        } else {
+            this.animationState.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
+        }
     }
 
     addAnimationByName(track_index, animationName, loop = false, delay = 0) {
