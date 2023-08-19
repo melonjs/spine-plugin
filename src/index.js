@@ -147,7 +147,7 @@ export default class Spine extends Renderable {
      * @param {number} dt - time since the last update in milliseconds.
      * @returns {boolean} true if the renderable is dirty
      */
-    update(dt) { // eslint-disable-line no-unused-vars
+    update(dt) {
         if (typeof this.skeleton !== "undefined") {
             let rootBone = this.skeleton.getRootBone();
 
