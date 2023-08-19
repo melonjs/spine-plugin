@@ -53,6 +53,14 @@ export default class Spine extends Renderable {
         }
     }
 
+    get debugRendering() {
+        return this.skeletonRenderer.debugRendering;
+    }
+
+    set debugRendering(value) {
+        this.skeletonRenderer.debugRendering = value;
+    } 
+
     setSkeleton(atlasFile, jsonFile) {
         this.loadSpineAssets(atlasFile, jsonFile);
         this.root = this.skeleton.getRootBone();

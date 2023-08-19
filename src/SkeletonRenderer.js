@@ -10,6 +10,7 @@ export default class SkeletonRenderer {
     runtime;
     tempColor = new Color();
     tintColor = new MColor();
+    debugRendering = false;
 
     constructor(runtime) {
         this.runtime = runtime;
@@ -21,6 +22,10 @@ export default class SkeletonRenderer {
         // based on https://github.com/EsotericSoftware/spine-runtimes/blob/4.1/spine-ts/spine-canvas/src/SkeletonRenderer.ts
         let drawOrder = skeleton.drawOrder;
         let skeletonColor = skeleton.color;
+
+        if (this.debugRendering === true) {
+            renderer.setColor("green");
+        }
 
         for (var i = 0, n = drawOrder.length; i < n; i++) {
             let slot = drawOrder[i];
@@ -68,6 +73,9 @@ export default class SkeletonRenderer {
                 renderer.setBlendMode(blendModeLUT[blendMode]);
                 renderer.setGlobalAlpha(color.a);
                 renderer.drawImage(image, image.width * region.u, image.height * region.v, w, h, 0, 0, w, h);
+                if (this.debugRendering === true) {
+                    renderer.strokeRect(0, 0, w, h);
+                }
                 renderer.restore();
             }
         }
