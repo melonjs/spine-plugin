@@ -64,6 +64,8 @@ export default class Spine extends Renderable {
     setSkeleton(atlasFile, jsonFile) {
         this.loadSpineAssets(atlasFile, jsonFile);
         this.root = this.skeleton.getRootBone();
+         // Spine uses Y-up, melonJS uses Y-down
+        this.root.scaleY *= -1;
     }
 
     loadSpineAssets(atlasFile, jsonFile) {
@@ -157,7 +159,6 @@ export default class Spine extends Renderable {
                 rootBone.y = this.pos.y;
             }
 
-            this.skeletonRenderer.updateSkeleton(rootBone);
             // Update and apply the animation state, update the skeleton's
             // world transforms and render the skeleton.
             this.animationState.update(dt / 1000);

@@ -80,11 +80,4 @@ export default class SkeletonRenderer {
             }
         }
     }
-
-    updateSkeleton(skeleton) {
-        // for update skeleton
-        //if (this.isWebGLRenderer === false) {
-            skeleton.scaleY = -1;
-        //}
-    }
 }
