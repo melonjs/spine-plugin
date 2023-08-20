@@ -52,7 +52,7 @@
     "@babel/eslint-parser": "^7.22.0",
     "@babel/plugin-syntax-import-assertions": "^7.22.5",
     "@rollup/plugin-commonjs": "^25.0.4",
-    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-node-resolve": "^15.2.0",
     "@rollup/plugin-replace": "^5.0.2",
     "del-cli": "^5.0.0",
     "eslint": "^8.47.0",
