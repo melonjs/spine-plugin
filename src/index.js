@@ -186,7 +186,7 @@ export default class Spine extends Renderable {
     setAnimationByIndex(track_index, index, loop = false) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
-        } else { 
+        } else {
             this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
         }
     }
