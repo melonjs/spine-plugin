@@ -1,5 +1,5 @@
 /*!
- * melonJS Spine plugin - v1.0.0
+ * melonJS Spine plugin - v1.1.0
  * http://www.melonjs.org
  * @melonjs/spine-plugin is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
@@ -14938,6 +14938,7 @@ class SkeletonRenderer {
     runtime;
     tempColor = new Color();
     tintColor = new Color$1();
+    debugRendering = false;
 
     constructor(runtime) {
         this.runtime = runtime;
@@ -14949,6 +14950,10 @@ class SkeletonRenderer {
         // based on https://github.com/EsotericSoftware/spine-runtimes/blob/4.1/spine-ts/spine-canvas/src/SkeletonRenderer.ts
         let drawOrder = skeleton.drawOrder;
         let skeletonColor = skeleton.color;
+
+        if (this.debugRendering === true) {
+            renderer.setColor("green");
+        }
 
         for (var i = 0, n = drawOrder.length; i < n; i++) {
             let slot = drawOrder[i];
@@ -14996,16 +15001,12 @@ class SkeletonRenderer {
                 renderer.setBlendMode(blendModeLUT[blendMode]);
                 renderer.setGlobalAlpha(color.a);
                 renderer.drawImage(image, image.width * region.u, image.height * region.v, w, h, 0, 0, w, h);
+                if (this.debugRendering === true) {
+                    renderer.strokeRect(0, 0, w, h);
+                }
                 renderer.restore();
             }
         }
-    }
-
-    updateSkeleton(skeleton) {
-        // for update skeleton
-        //if (this.isWebGLRenderer === false) {
-            skeleton.scaleY = -1;
-        //}
     }
 }
 
@@ -15055,9 +15056,19 @@ class Spine extends Renderable$1 {
         }
     }
 
+    get debugRendering() {
+        return this.skeletonRenderer.debugRendering;
+    }
+
+    set debugRendering(value) {
+        this.skeletonRenderer.debugRendering = value;
+    }
+
     setSkeleton(atlasFile, jsonFile) {
         this.loadSpineAssets(atlasFile, jsonFile);
         this.root = this.skeleton.getRootBone();
+         // Spine uses Y-up, melonJS uses Y-down
+        this.root.scaleY *= -1;
     }
 
     loadSpineAssets(atlasFile, jsonFile) {
@@ -15139,7 +15150,7 @@ class Spine extends Renderable$1 {
      * @param {number} dt - time since the last update in milliseconds.
      * @returns {boolean} true if the renderable is dirty
      */
-    update(dt) { // eslint-disable-line no-unused-vars
+    update(dt) {
         if (typeof this.skeleton !== "undefined") {
             let rootBone = this.skeleton.getRootBone();
 
@@ -15151,7 +15162,6 @@ class Spine extends Renderable$1 {
                 rootBone.y = this.pos.y;
             }
 
-            this.skeletonRenderer.updateSkeleton(rootBone);
             // Update and apply the animation state, update the skeleton's
             // world transforms and render the skeleton.
             this.animationState.update(dt / 1000);
@@ -15176,12 +15186,12 @@ class Spine extends Renderable$1 {
         this.skeletonRenderer.draw(renderer, this.skeleton);
     }
 
-
     setAnimationByIndex(track_index, index, loop = false) {
-        if (index < 0 || index >= this.skeleton.data.animations.length)
-            { return (console.log("Animation Index not found")); }
-        else
-            { this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop); }
+        if (index < 0 || index >= this.skeleton.data.animations.length) {
+            return (console.log("Animation Index not found"));
+        } else {
+            this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
+        }
     }
 
     setAnimation(track_index, name, loop = false) {
@@ -15189,10 +15199,11 @@ class Spine extends Renderable$1 {
     }
 
     addAnimationByIndex(track_index, index, loop = false, delay = 0) {
-        if (index < 0 || index >= this.skeleton.data.animations.length)
-            { return (console.log("Animation Index not found")); }
-        else
-            { this.animationState.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay); }
+        if (index < 0 || index >= this.skeleton.data.animations.length) {
+            return (console.log("Animation Index not found"));
+        } else {
+            this.animationState.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
+        }
     }
 
     addAnimationByName(track_index, animationName, loop = false, delay = 0) {

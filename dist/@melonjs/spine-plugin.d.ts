@@ -370,6 +370,8 @@ declare class Spine extends Renderable$1 {
     mixTime: any;
     jsonFile: any;
     atlasFile: any;
+    set debugRendering(arg: boolean);
+    get debugRendering(): boolean;
     setSkeleton(atlasFile: any, jsonFile: any): void;
     loadSpineAssets(atlasFile: any, jsonFile: any): void;
     rotate(angle: any, v: any): void;
@@ -4073,8 +4075,8 @@ declare class SkeletonRenderer {
     runtime: any;
     tempColor: Color;
     tintColor: Color$1;
+    debugRendering: boolean;
     draw(renderer: any, skeleton: any): void;
-    updateSkeleton(skeleton: any): void;
 }
 import { Vector2d } from 'melonjs';
 /******************************************************************************
