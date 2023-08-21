@@ -85,16 +85,6 @@ const DataManifest = [
 		"name": "spineboy-pro.skel",
 		"type": "binary",
 		"src": "data/spine/spineboy-pro.skel"
-	},
-	{
-		"name": "texture_image_0",
-		"type": "image",
-		"src": "./data/image/texture_image_0.png"
-	},
-	{
-		"name": "texture_image_0",
-		"type": "json",
-		"src": "./data/json/texture_image_0.json"
 	}
 ];
 

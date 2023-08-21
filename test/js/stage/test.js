@@ -1,15 +1,10 @@
 import * as me from 'melonjs';
 
-import game from '../game.js';
 import AlienSpine from '../renderables/alienspine.js';
 import CoinSpine from '../renderables/coinspine.js';
 
 export default class TestStage extends me.Stage {
 	onResetEvent() {
-        var bg_sprite = game.textureAtlas.createSpriteFromName("background");
-
-        bg_sprite.anchorPoint.set(0, 0);
-        bg_sprite.scale(3, 3);
 
         // Method 1
         // add atlas and json file in through object constructor
@@ -21,8 +16,9 @@ export default class TestStage extends me.Stage {
         spineCoin.setSkeleton("coin-pma.atlas", "coin-pro.json");
 		spineCoin.setAnimation(0, "animation", true);
 
+        me.game.world.backgroundColor.parseCSS("#202020");
+
         // add all object to the game world
-		me.game.world.addChild(bg_sprite);
         me.game.world.addChild(spineAlien);
         me.game.world.addChild(spineCoin);
 

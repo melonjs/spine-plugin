@@ -26,9 +26,6 @@ export default function onload() {
 	me.loader.preload(DataManifest, async function() {
 		me.state.set(me.state.PLAY, new TestStage());
 		
-		// global texture Atlas
-		game.textureAtlas = new me.TextureAtlas([me.loader.getJSON("texture_image_0")], undefined, false);
-
 		// load spine asset	
 		Spine.assetManager.setPrefix("data/spine/")
 		Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
