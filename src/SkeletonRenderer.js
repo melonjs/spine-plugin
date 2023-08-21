@@ -1,5 +1,5 @@
 import { Color as MColor, Math as MMath } from "melonjs";
-import { RegionAttachment, Color } from "@esotericsoftware/spine-core";
+import { SkeletonClipping, ClippingAttachment, MeshAttachment, RegionAttachment, Color } from "@esotericsoftware/spine-core";
 
 const worldVertices = new Float32Array(8);
 const blendModeLUT = ["normal", "additive", "multiply", "screen"];
@@ -10,6 +10,8 @@ export default class SkeletonRenderer {
     runtime;
     tempColor = new Color();
     tintColor = new MColor();
+    clipper = new SkeletonClipping();
+    vertexSize = 2 + 2 + 4;
     debugRendering = false;
 
     constructor(runtime) {
@@ -19,7 +21,7 @@ export default class SkeletonRenderer {
     }
 
     draw(renderer, skeleton) {
-        // based on https://github.com/EsotericSoftware/spine-runtimes/blob/4.1/spine-ts/spine-canvas/src/SkeletonRenderer.ts
+        let clipper = this.clipper;
         let drawOrder = skeleton.drawOrder;
         let skeletonColor = skeleton.color;
 
@@ -28,10 +30,14 @@ export default class SkeletonRenderer {
         }
 
         for (var i = 0, n = drawOrder.length; i < n; i++) {
+            let clippedVertexSize = clipper.isClipping() ? 2 : this.vertexSize;
             let slot = drawOrder[i];
             let bone = slot.bone;
 
-            if (!bone.active) continue;
+            if (!bone.active) {
+                clipper.clipEndWithSlot(slot);
+                continue;
+            }
 
             let attachment = slot.getAttachment();
 
@@ -48,7 +54,7 @@ export default class SkeletonRenderer {
                     skeletonColor.b * slotColor.b * regionColor.b,
                     skeletonColor.a * slotColor.a * regionColor.a);
 
-                attachment.computeWorldVertices(slot, worldVertices, 0, 2);
+                attachment.computeWorldVertices(slot, worldVertices, 0, clippedVertexSize);
 
                 renderer.save();
                 renderer.transform(bone.a, bone.c, bone.b, bone.d, bone.worldX, bone.worldY);
@@ -72,12 +78,30 @@ export default class SkeletonRenderer {
                 renderer.setTint(color);
                 renderer.setBlendMode(blendModeLUT[blendMode]);
                 renderer.setGlobalAlpha(color.a);
+
+                if (clipper.isClipping()) {
+                    console.warn("spine-plugin : clipping not implemented");
+                }
+
                 renderer.drawImage(image, image.width * region.u, image.height * region.v, w, h, 0, 0, w, h);
+
                 if (this.debugRendering === true) {
                     renderer.strokeRect(0, 0, w, h);
                 }
+                
                 renderer.restore();
+            } else if (attachment instanceof MeshAttachment) {
+                // do nothing for now;
+            } else if (attachment instanceof ClippingAttachment) {
+                let clip = attachment;
+                clipper.clipStart(slot, clip);
+                continue;
+            } else {
+                clipper.clipEndWithSlot(slot);
+                continue;
             }
+            clipper.clipEndWithSlot(slot);
         }
+        clipper.clipEnd();
     }
 }
