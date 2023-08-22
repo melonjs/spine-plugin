@@ -2,7 +2,7 @@
 
 a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementation for [melonJS 2](www.melonjs.org)
 
-![melonjs-spine-gif](https://github.com/melonjs/spine-plugin/assets/4033090/e4f1db3e-e2c7-4d18-9d80-b42fc9897c59)
+![melonjs-spine-gif](https://github.com/melonjs/spine-plugin/assets/4033090/dc259c8e-def6-419e-83a9-cda374715686)
 
 >Note: although functional, this plugin is still a work in progress. Feedback and especially contributions are welcome!
 
