@@ -8,7 +8,7 @@ export default class TestStage extends me.Stage {
 
         // Method 1
         // add atlas and json file in through object constructor
-        var spineAlien = new AlienSpine(800, 900, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json", width: 100, height: 100});
+        var spineAlien = new AlienSpine(800, 1000, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json", width: 100, height: 100});
         
         // Method 2
         // add atlas and json by set skeleton
