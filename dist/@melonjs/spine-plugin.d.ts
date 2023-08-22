@@ -4075,7 +4075,11 @@ declare class SkeletonRenderer {
     runtime: any;
     tempColor: Color;
     tintColor: Color$1;
+    vertexSize: number;
     debugRendering: boolean;
+    clipper: SkeletonClipping;
+    clippingVertices: any[];
+    clippingMask: Polygon;
     draw(renderer: any, skeleton: any): void;
 }
 import { Vector2d } from 'melonjs';
@@ -4129,4 +4133,5 @@ declare class Vertices {
     vertices: any;
 }
 import { Color as Color$1 } from 'melonjs';
+import { Polygon } from 'melonjs';
 export { Spine as default };

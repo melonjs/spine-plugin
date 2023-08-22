@@ -1,11 +1,11 @@
 /*!
- * melonJS Spine plugin - v1.1.0
+ * melonJS Spine plugin - v1.2.0
  * http://www.melonjs.org
  * @melonjs/spine-plugin is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
  * @copyright (C) 2011 - 2023 AltByte Pte Ltd
  */
-import { event, video, Color as Color$1, Math as Math$1, Renderable as Renderable$1, Vector2d } from 'melonjs';
+import { event, video, Color as Color$1, Polygon, Math as Math$1, Renderable as Renderable$1, Vector2d } from 'melonjs';
 
 /******************************************************************************
  * Spine Runtimes License Agreement
@@ -14938,7 +14938,11 @@ class SkeletonRenderer {
     runtime;
     tempColor = new Color();
     tintColor = new Color$1();
+    vertexSize = 2 + 2 + 4;
     debugRendering = false;
+    clipper = new SkeletonClipping();
+    clippingVertices = [];
+    clippingMask = new Polygon(0, 0);
 
     constructor(runtime) {
         this.runtime = runtime;
@@ -14947,19 +14951,20 @@ class SkeletonRenderer {
     }
 
     draw(renderer, skeleton) {
-        // based on https://github.com/EsotericSoftware/spine-runtimes/blob/4.1/spine-ts/spine-canvas/src/SkeletonRenderer.ts
+        let clipper = this.clipper;
         let drawOrder = skeleton.drawOrder;
         let skeletonColor = skeleton.color;
 
-        if (this.debugRendering === true) {
-            renderer.setColor("green");
-        }
-
         for (var i = 0, n = drawOrder.length; i < n; i++) {
+            let clippedVertexSize = clipper.isClipping() ? 2 : this.vertexSize;
             let slot = drawOrder[i];
             let bone = slot.bone;
 
-            if (!bone.active) continue;
+            if (!bone.active) {
+                clipper.clipEndWithSlot(slot);
+                renderer.clearMask();
+                continue;
+            }
 
             let attachment = slot.getAttachment();
 
@@ -14976,7 +14981,7 @@ class SkeletonRenderer {
                     skeletonColor.b * slotColor.b * regionColor.b,
                     skeletonColor.a * slotColor.a * regionColor.a);
 
-                attachment.computeWorldVertices(slot, worldVertices, 0, 2);
+                attachment.computeWorldVertices(slot, worldVertices, 0, clippedVertexSize);
 
                 renderer.save();
                 renderer.transform(bone.a, bone.c, bone.b, bone.d, bone.worldX, bone.worldY);
@@ -15000,13 +15005,41 @@ class SkeletonRenderer {
                 renderer.setTint(color);
                 renderer.setBlendMode(blendModeLUT[blendMode]);
                 renderer.setGlobalAlpha(color.a);
+
+                if (clipper.isClipping()) {
+                    renderer.setMask(this.clippingMask);
+                }
+
                 renderer.drawImage(image, image.width * region.u, image.height * region.v, w, h, 0, 0, w, h);
+
                 if (this.debugRendering === true) {
+                    renderer.setColor("green");
                     renderer.strokeRect(0, 0, w, h);
                 }
+
                 renderer.restore();
+            } else if (attachment instanceof MeshAttachment) {
+                // do nothing for now;
+            } else if (attachment instanceof ClippingAttachment) {
+                let clip = attachment;
+                let vertices = this.clippingVertices;
+                clipper.clipStart(slot, clip);
+                clip.computeWorldVertices(slot, 0, clip.worldVerticesLength, vertices, 0, 2);
+                this.clippingMask.setVertices(vertices, clip.worldVerticesLength);
+                if (this.debugRendering === true) {
+                    renderer.setColor("blue");
+                    renderer.stroke(this.clippingMask);
+                }
+                continue;
+            } else {
+                clipper.clipEndWithSlot(slot);
+                renderer.clearMask();
+                continue;
             }
+            clipper.clipEndWithSlot(slot);
+            renderer.clearMask();
         }
+        clipper.clipEnd();
     }
 }
 
