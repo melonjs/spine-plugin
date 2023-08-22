@@ -5,7 +5,6 @@ const worldVertices = new Float32Array(8);
 const blendModeLUT = ["normal", "additive", "multiply", "screen"];
 
 export default class SkeletonRenderer {
-    isWebGLRenderer;
     skeletonRenderer;
     runtime;
     tempColor = new Color();
