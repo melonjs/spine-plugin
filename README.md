@@ -1,6 +1,6 @@
 # melonJS Spine Plugin
 
-a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementation for [melonJS 2](www.melonjs.org)
+a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementation for [melonJS 2](http://www.melonjs.org)
 
 ![melonjs-spine-gif](https://github.com/melonjs/spine-plugin/assets/4033090/dc259c8e-def6-419e-83a9-cda374715686)
 
