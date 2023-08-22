@@ -17,6 +17,7 @@ this plugin is already bundled with the required Spine runtime, so there is no n
 >Note: this plugin requires melonJS version 15.9 or higher.
 
 To install the plugin using npm :
+
 `$ [sudo] npm install @melonjs/spine-plugin`
 
 Then import and use the plugin in your project. For example:
