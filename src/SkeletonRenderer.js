@@ -1,5 +1,5 @@
 import { Color as MColor, Math as MMath, Polygon } from "melonjs";
-import { SkeletonClipping, ClippingAttachment, MeshAttachment, RegionAttachment, Color } from "@esotericsoftware/spine-core";
+import { SkeletonClipping, ClippingAttachment, MeshAttachment, RegionAttachment } from "@esotericsoftware/spine-core";
 
 const worldVertices = new Float32Array(8);
 const blendModeLUT = ["normal", "additive", "multiply", "screen"];
@@ -7,7 +7,6 @@ const blendModeLUT = ["normal", "additive", "multiply", "screen"];
 export default class SkeletonRenderer {
     skeletonRenderer;
     runtime;
-    tempColor = new Color();
     tintColor = new MColor();
     vertexSize = 2 + 2 + 4;
     debugRendering = false;
@@ -18,7 +17,6 @@ export default class SkeletonRenderer {
     constructor(runtime) {
         this.runtime = runtime;
         this.skeletonRenderer = new runtime.SkeletonRenderer();
-        this.tempColor = new Color();
     }
 
     draw(renderer, skeleton) {
