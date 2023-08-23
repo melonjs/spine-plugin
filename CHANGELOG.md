@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 - _2023-08-23
+
+- code refactoring and optimization to prepare for future feature additions
+- fix URLs in the package.json file
+
 ## 1.2.0 - _2023-08-22
 
 - add support for clipping (coin example is now rendered properly)
