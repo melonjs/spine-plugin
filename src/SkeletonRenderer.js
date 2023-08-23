@@ -4,6 +4,9 @@ import { SkeletonClipping, ClippingAttachment, MeshAttachment, RegionAttachment 
 const worldVertices = new Float32Array(8);
 const blendModeLUT = ["normal", "additive", "multiply", "screen"];
 
+const regionDebugColor = "green";
+const clipDebugColor = "blue";
+
 export default class SkeletonRenderer {
     skeletonRenderer;
     runtime;
@@ -23,11 +26,15 @@ export default class SkeletonRenderer {
         let clipper = this.clipper;
         let drawOrder = skeleton.drawOrder;
         let skeletonColor = skeleton.color;
+        let clippingMask = this.clippingMask;
+        let debugRendering = this.debugRendering;
 
         for (var i = 0, n = drawOrder.length; i < n; i++) {
             let clippedVertexSize = clipper.isClipping() ? 2 : this.vertexSize;
             let slot = drawOrder[i];
             let bone = slot.bone;
+            let image;
+            let region;
 
             if (!bone.active) {
                 clipper.clipEndWithSlot(slot);
@@ -38,8 +45,36 @@ export default class SkeletonRenderer {
             let attachment = slot.getAttachment();
 
             if (attachment instanceof RegionAttachment) {
-                let region = attachment.region;
-                let image = region.texture.getImage();
+                attachment.computeWorldVertices(slot, worldVertices, 0, clippedVertexSize);
+                region = attachment.region;
+                image = region.texture.getImage();
+            } else if (attachment instanceof MeshAttachment) {
+                /*
+                // commenting for now as totally untested
+                let mesh = attachment;
+                mesh.computeWorldVertices(slot, 0, mesh.worldVerticesLength, worldVertices, 0, 2);
+                region = mesh.region;
+                image = mesh.region.texture.getImage();
+                */
+               console.warn("spine-plugin: MeshAttachment is not supported yet");
+            } else if (attachment instanceof ClippingAttachment) {
+                let clip = attachment;
+                let vertices = this.clippingVertices;
+                clipper.clipStart(slot, clip);
+                clip.computeWorldVertices(slot, 0, clip.worldVerticesLength, vertices, 0, 2);
+                clippingMask.setVertices(vertices, clip.worldVerticesLength);
+                if (debugRendering === true) {
+                    renderer.setColor(clipDebugColor);
+                    renderer.stroke(clippingMask);
+                }
+                continue;
+            } else {
+                clipper.clipEndWithSlot(slot);
+                renderer.clearMask();
+                continue;
+            }
+
+            if (typeof image !== "undefined") {
                 let slotColor = slot.color;
                 let regionColor = attachment.color;
                 let blendMode = slot.data.blendMode;
@@ -49,8 +84,6 @@ export default class SkeletonRenderer {
                     skeletonColor.g * slotColor.g * regionColor.g,
                     skeletonColor.b * slotColor.b * regionColor.b,
                     skeletonColor.a * slotColor.a * regionColor.a);
-
-                attachment.computeWorldVertices(slot, worldVertices, 0, clippedVertexSize);
 
                 renderer.save();
                 renderer.transform(bone.a, bone.c, bone.b, bone.d, bone.worldX, bone.worldY);
@@ -76,34 +109,17 @@ export default class SkeletonRenderer {
                 renderer.setGlobalAlpha(color.a);
 
                 if (clipper.isClipping()) {
-                    renderer.setMask(this.clippingMask);
+                    renderer.setMask(clippingMask);
                 }
 
                 renderer.drawImage(image, image.width * region.u, image.height * region.v, w, h, 0, 0, w, h);
 
-                if (this.debugRendering === true) {
-                    renderer.setColor("green");
+                if (debugRendering === true) {
+                    renderer.setColor(regionDebugColor);
                     renderer.strokeRect(0, 0, w, h);
                 }
 
                 renderer.restore();
-            } else if (attachment instanceof MeshAttachment) {
-                // do nothing for now;
-            } else if (attachment instanceof ClippingAttachment) {
-                let clip = attachment;
-                let vertices = this.clippingVertices;
-                clipper.clipStart(slot, clip);
-                clip.computeWorldVertices(slot, 0, clip.worldVerticesLength, vertices, 0, 2);
-                this.clippingMask.setVertices(vertices, clip.worldVerticesLength);
-                if (this.debugRendering === true) {
-                    renderer.setColor("blue");
-                    renderer.stroke(this.clippingMask);
-                }
-                continue;
-            } else {
-                clipper.clipEndWithSlot(slot);
-                renderer.clearMask();
-                continue;
             }
             clipper.clipEndWithSlot(slot);
             renderer.clearMask();
