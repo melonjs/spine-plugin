@@ -18,10 +18,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/melonjs/debug-spine.git"
+    "url": "git+https://github.com/melonjs/spine-plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/melonjs/debug-spine/issues"
+    "url": "https://github.com/melonjs/spine-plugin/issues"
   },
   "license": "MIT",
   "author": "AltByte Pte Ltd",
