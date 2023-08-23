@@ -2,18 +2,22 @@
   "name": "@melonjs/spine-plugin",
   "version": "1.2.1",
   "description": "melonJS Spine plugin",
+  "homepage": "https://github.com/melonjs/spine-plugin#readme",
   "type": "module",
   "keywords": [
     "2D",
     "HTML5",
     "javascript",
     "TypeScript",
-    "es6",
+    "ES6",
     "Canvas",
     "WebGL",
     "WebGL2",
     "melonjs",
-    "Spine",
+    "plugin".
+    "spine",
+    "spine-runtimes",
+    "spine-animation",
     "esotericsoftware"
   ],
   "repository": {
@@ -38,7 +42,8 @@
     "src/",
     "package.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "peerDependencies": {
     "melonjs": "^15.9.0"
@@ -69,9 +74,5 @@
     "prepublishOnly": "npm run build",
     "clean": "del-cli --force dist/*",
     "types": "tsc"
-  },
-  "homepage": "https://github.com/melonjs/spine-plugin#readme",
-  "directories": {
-    "test": "test"
   }
 }
