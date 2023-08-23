@@ -4070,10 +4070,8 @@ declare class CanvasTexture extends Texture {
 }
 declare class SkeletonRenderer {
     constructor(runtime: any);
-    isWebGLRenderer: any;
     skeletonRenderer: any;
     runtime: any;
-    tempColor: Color;
     tintColor: Color$1;
     vertexSize: number;
     debugRendering: boolean;
