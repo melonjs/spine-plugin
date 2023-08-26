@@ -1,24 +1,18 @@
 import * as me from 'melonjs';
-import game from '../game.js'
-
-
 import Spine from 'spinePlugin'
 
-export default class CoinSpine extends Spine {
+export default class SpineRenderable extends Spine {
 	constructor(x, y, settings = {}){
 		super(x, y, Object.assign(settings));
 
 		// add a physic body
 		this.body = new me.Body(this);
-		var bodyShapePos = {x: (this.anchorPoint.x * this.width), y:(this.anchorPoint.y * this.height)}
-		this.body.addShape(me.pool.pull("me.Rect", 0 - bodyShapePos.y, 0 - bodyShapePos.y, this.width, this.height) );
-		this.body.collisionType = me.collision.types.ENEMY_OBJECT;
-		this.body.setCollisionMask(me.collision.types.ALL_OBJECT);
+		this.body.addShape(me.pool.pull("me.Rect", 0, 0, this.width, this.height));
 		this.body.gravityScale = 0;
 		this.isKinematic = false;
 
 		// rotate the object when clicking within the object bounds
-		me.input.registerPointerEvent("pointerdown", this, ()=> {
+		me.input.registerPointerEvent("pointerdown", this, () => {
 			this.rotate(1.5707970000000002);
 		});
 	}
