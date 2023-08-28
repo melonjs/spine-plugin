@@ -4073,12 +4073,14 @@ declare class SkeletonRenderer {
     skeletonRenderer: any;
     runtime: any;
     tintColor: Color$1;
-    vertexSize: number;
+    tempColor: Color$1;
     debugRendering: boolean;
     clipper: SkeletonClipping;
     clippingVertices: any[];
     clippingMask: Polygon;
     draw(renderer: any, skeleton: any): void;
+    drawTriangle(renderer: any, img: any, x0: any, y0: any, u0: any, v0: any, x1: any, y1: any, u1: any, v1: any, x2: any, y2: any, u2: any, v2: any): void;
+    computeMeshVertices(slot: any, mesh: any, pma: boolean | undefined, vertexSize: any): void;
 }
 import { Vector2d } from 'melonjs';
 /******************************************************************************

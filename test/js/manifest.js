@@ -42,19 +42,19 @@ const DataManifest = [
 		"src": "data/spine/dragon-pma.atlas"
 	},
 	{
-		"name": "goblins-pma.atlas",
+		"name": "owl-pma.atlas",
 		"type": "binary",
-		"src": "data/spine/goblins-pma.atlas"
+		"src": "data/spine/owl-pma.atlas"
 	},
 	{
-		"name": "goblins-pro.json",
+		"name": "owl-pro.json",
 		"type": "json",
-		"src": "data/spine/goblins-pro.json"
+		"src": "data/spine/owl-pro.json"
 	},
 	{
-		"name": "goblins-pro.skel",
+		"name": "owl-pro.skel",
 		"type": "binary",
-		"src": "data/spine/goblins-pro.skel"
+		"src": "data/spine/owl-pro.skel"
 	},
 	{
 		"name": "mix-and-match-pma.atlas",

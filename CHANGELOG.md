@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 - 2023-08-28å
+
+- add support for Mesh Attachement
+- added more examples under the test folder and separated them into individual files
+- add a fullscreen option to examples (pressing the "F" key toggles fullscreen mode)
+
 ## 1.2.1 - 2023-08-23
 
 - code refactoring and optimization to prepare for future feature additions
