@@ -23,18 +23,20 @@ To install the plugin using npm :
 Then import and use the plugin in your project. For example:
 ```JavaScript
 import * as Spine from '@melonjs/spine-plugin';
+import * as me from 'melonjs';
 
 // load assets
 Spine.assetManager.setPrefix("data/spine/")
 Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
 
-// create new Spine Renderable
-export default class AlienSpine extends Spine {
-    constructor(x, y, settings ){
-        super(x, y, settings);
-        ...
-    }
-}
+// create a new Spine Renderable
+let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
+
+// set default animation
+spineAlien.setAnimation(0, "death", true);
+
+// add it to the game world
+me.game.world.addChild(spineAlien);
 ```
 
 for more details, see a complete usage example in the [test](test) folder
