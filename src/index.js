@@ -1,5 +1,4 @@
-import { Math, Renderable, Vector2d, video } from "melonjs";
-
+import { Math, Renderable, Vector2d, video, loader, utils } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 import { Vector2 } from "@esotericsoftware/spine-core";
@@ -9,6 +8,44 @@ import SkeletonRenderer from "./SkeletonRenderer.js";
 
 export let assetManager = new AssetManager();
 
+// a custom Spine parser for melonJS preloader
+function spineParser(data, onload, onerror) {
+
+    // decompose data.src for the spine loader
+    const ext = utils.file.getExtension(data.src);
+    const basename = utils.file.getBasename(data.src);
+    const path = utils.file.getPath(data.src);
+    const filename = basename + "." + ext;
+
+    // set url prefix
+    assetManager.setPrefix(path);
+
+    // load asset
+    switch (ext) {
+        case "atlas":
+            assetManager.asset_manager.loadTextureAtlas(filename, onload, onerror);
+            break;
+        case "json":
+            assetManager.asset_manager.loadText(filename, onload, onerror);
+            break;
+        case "skel":
+            assetManager.asset_manager.loadBinary(filename, onload, onerror);
+            break;
+        default:
+            throw "Spine plugin: unknown extension when preloading spine assets";
+    }
+
+    return 1;
+}
+
+// set the spine custom parser
+loader.setParser("spine", spineParser);
+
+/**
+ * @classdesc
+ * An object to display a Spine animated skeleton on screen.
+ * @augments Renderable
+ */
 export default class Spine extends Renderable {
     runtime;
     skeleton;
@@ -19,6 +56,39 @@ export default class Spine extends Renderable {
     boneOffset;
     boneSize;
 
+    /**
+     * @param {number} x - the x coordinates of the Spine object
+     * @param {number} y - the y coordinates of the Spine object
+     * @param {object} settings - Configuration parameters for the Spine object
+     * @param {number} [settings.atlasFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [settings.jsonFile] - the name of the atlasFile to be used to create this spine animation
+     * @example
+    * import * as Spine from '@melonjs/spine-plugin';
+    * import * as me from 'melonjs';
+    *
+    * // prepare/declare assets for the preloader
+    * const DataManifest = [
+    *     {
+    *         "name": "alien-ess.json",
+    *         "type": "spine",
+    *         "src": "data/spine/alien-ess.json"
+    *     },
+    *     {
+    *         "name": "alien.atlas",
+    *         "type": "spine",
+    *         "src": "data/spine/alien.atlas"
+    *     },
+    * ]
+    *
+    * // create a new Spine Renderable
+    * let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
+    *
+    * // set default animation
+    * spineAlien.setAnimation(0, "death", true);
+    *
+    * // add it to the game world
+    * me.game.world.addChild(spineAlien);
+    */
     constructor(x, y, settings) {
         super(x, y, settings.width, settings.height);
 

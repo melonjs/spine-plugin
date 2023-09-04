@@ -2,6 +2,8 @@
 
 ## 1.4.0 - 2023-09-xx
 
+- add support for loading spine assets through the melonJS preloader (see README)
+
 ## 1.3.0 - 2023-08-28
 
 - add support for Mesh Attachement
