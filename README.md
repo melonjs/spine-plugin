@@ -14,7 +14,7 @@ a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementati
 Installation
 -------------------------------------------------------------------------------
 this plugin is already bundled with the required Spine runtime, so there is no need to install it separately.
->Note: this plugin requires melonJS version 15.9.2 or higher.
+>Note: this plugin requires melonJS version 15.10 or higher.
 
 To install the plugin using npm :
 
@@ -25,9 +25,19 @@ Then import and use the plugin in your project. For example:
 import * as Spine from '@melonjs/spine-plugin';
 import * as me from 'melonjs';
 
-// load assets
-Spine.assetManager.setPrefix("data/spine/")
-Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
+// prepare/declare assets for the preloader
+const DataManifest = [
+	{
+		"name": "alien-ess.json",
+		"type": "spine",
+		"src": "data/spine/alien-ess.json"
+	},
+	{
+		"name": "alien.atlas",
+		"type": "spine",
+		"src": "data/spine/alien.atlas"
+	},
+]
 
 // create a new Spine Renderable
 let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
