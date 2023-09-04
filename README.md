@@ -13,7 +13,7 @@ a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementati
 
 Installation
 -------------------------------------------------------------------------------
-this plugin is already bundled with the required Spine runtime, so there is no need to install it separately.
+this plugin is already bundled with the required Spine 4.1 runtime, so there is no need to install it separately.
 >Note: this plugin requires melonJS version 15.10 or higher.
 
 To install the plugin using npm :
@@ -27,16 +27,16 @@ import * as me from 'melonjs';
 
 // prepare/declare assets for the preloader
 const DataManifest = [
-	{
-		"name": "alien-ess.json",
-		"type": "spine",
-		"src": "data/spine/alien-ess.json"
-	},
-	{
-		"name": "alien.atlas",
-		"type": "spine",
-		"src": "data/spine/alien.atlas"
-	},
+    {
+        "name": "alien-ess.json",
+        "type": "spine",
+        "src": "data/spine/alien-ess.json"
+    },
+    {
+        "name": "alien.atlas",
+        "type": "spine",
+        "src": "data/spine/alien.atlas"
+    },
 ]
 
 // create a new Spine Renderable
@@ -48,6 +48,7 @@ spineAlien.setAnimation(0, "death", true);
 // add it to the game world
 me.game.world.addChild(spineAlien);
 ```
+>Note: use "spine" as a value for the `type` property to indicate which assets and are actual Spine assets and to be loaded using the plugin (requires version 1.4.0 or higher of the Spine plugin)
 
 for more details, see a complete usage example in the [test](test) folder
 
