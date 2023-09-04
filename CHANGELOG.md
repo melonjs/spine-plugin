@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.3.0 - 2023-08-28å
+## 1.4.0 - 2023-09-xx
+
+## 1.3.0 - 2023-08-28
 
 - add support for Mesh Attachement
 - added more examples under the test folder and separated them into individual files
