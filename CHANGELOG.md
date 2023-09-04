@@ -3,6 +3,7 @@
 ## 1.4.0 - 2023-09-xx
 
 - add support for loading spine assets through the melonJS preloader (see README)
+- add inline documentation for the Spine class, properties and methods
 
 ## 1.3.0 - 2023-08-28
 
