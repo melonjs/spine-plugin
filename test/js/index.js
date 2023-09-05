@@ -1,6 +1,5 @@
 import * as me from 'melonjs';
 import { DebugPanelPlugin } from "debugPlugin";
-import * as Spine from 'spinePlugin'
 
 import DataManifest from './manifest.js'
 import SpineRenderable from "./renderables/spine.js";
@@ -38,14 +37,10 @@ export default function player(x, y, atlasFile, jsonFile, defaultAnimation, skin
 	me.loader.preload(DataManifest, async function() {
 		me.state.change(me.state.DEFAULT, true);
 
-		// load spine assets
-		Spine.assetManager.setPrefix("data/spine/")
-		Spine.assetManager.loadAsset(atlasFile, jsonFile);
-		await Spine.assetManager.loadAll();
-
+		// set a color background
 		me.game.world.backgroundColor.parseCSS("#202020");
 
-		// pass add atlas and json file in through object constructor
+		// pass atlas and json filenames through object constructor
 		let spineRenderable = new SpineRenderable(x, y, {atlasFile: atlasFile, jsonFile: jsonFile});
 		
 		// set skin
