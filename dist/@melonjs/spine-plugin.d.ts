@@ -1,6 +1,49 @@
 export let assetManager: AssetManager;
-declare class Spine extends Renderable$1 {
-    constructor(x: any, y: any, settings: any);
+/**
+ * @classdesc
+ * An object to display a Spine animated skeleton on screen.
+ * @augments Renderable
+ */
+declare class Spine extends Renderable {
+    /**
+     * @param {number} x - the x coordinates of the Spine object
+     * @param {number} y - the y coordinates of the Spine object
+     * @param {object} settings - Configuration parameters for the Spine object
+     * @param {number} [settings.atlasFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [settings.jsonFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [settings.mixTime = 0.2] - the default mix duration to use when no mix duration has been defined between two animations.
+     * @example
+    * import * as Spine from '@melonjs/spine-plugin';
+    * import * as me from 'melonjs';
+    *
+    * // prepare/declare assets for the preloader
+    * const DataManifest = [
+    *     {
+    *         "name": "alien-ess.json",
+    *         "type": "spine",
+    *         "src": "data/spine/alien-ess.json"
+    *     },
+    *     {
+    *         "name": "alien.atlas",
+    *         "type": "spine",
+    *         "src": "data/spine/alien.atlas"
+    *     },
+    * ]
+    *
+    * // create a new Spine Renderable
+    * let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
+    *
+    * // set default animation
+    * spineAlien.setAnimation(0, "death", true);
+    *
+    * // add it to the game world
+    * me.game.world.addChild(spineAlien);
+    */
+    constructor(x: number, y: number, settings: {
+        atlasFile?: number | undefined;
+        jsonFile?: number | undefined;
+        mixTime?: number | undefined;
+    });
     runtime: {
         __proto__: null;
         AlphaTimeline: typeof AlphaTimeline;
@@ -363,53 +406,208 @@ declare class Spine extends Renderable$1 {
     root: any;
     boneOffset: Vector2;
     boneSize: Vector2;
-    scaleValue: {
-        x: number;
-        y: number;
-    };
-    mixTime: any;
-    jsonFile: any;
-    atlasFile: any;
+    mixTime: number;
+    jsonFile: number | undefined;
+    atlasFile: number | undefined;
     set debugRendering(arg: boolean);
+    /**
+     * Whether to enabler the debug mode when rendering the spine object
+     * @default false
+     * @type {boolean}
+     */
     get debugRendering(): boolean;
-    setSkeleton(atlasFile: any, jsonFile: any): void;
-    loadSpineAssets(atlasFile: any, jsonFile: any): void;
-    rotate(angle: any, v: any): void;
-    scale(x: any, y?: any): void;
+    /**
+     * set and load the given skeleton atlas and json definition files
+     * (use this if you did not specify any json or atlas through the constructor)
+     * @param {number} [atlasFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [jsonFile] - the name of the atlasFile to be used to create this spine animation
+     * @example
+     * // create a new Spine Renderable
+     * let spineAlien = new Spine(100, 100);
+     *
+     * // set the skeleton
+     * spineAlien.setSkeleton("alien.atlas", "alien-ess.json");
+     *
+     * // set default animation
+     * spineAlien.setAnimation(0, "death", true);
+     *
+     * // add it to the game world
+     * me.game.world.addChild(spineAlien);
+     */
+    setSkeleton(atlasFile?: number | undefined, jsonFile?: number | undefined): void;
+    isDirty: boolean | undefined;
+    /**
+    * Rotate this Spine object by the specified angle (in radians).
+    * @param {number} angle - The angle to rotate (in radians)
+    * @param {Vector2d|ObservableVector2d} [v] - an optional point to rotate around
+    * @returns {Spine} Reference to this object for method chaining
+    */
+    rotate(angle: number, v?: Vector2d | ObservableVector2d): Spine;
+    /**
+    * scale the Spine object around his anchor point.  Scaling actually applies changes
+    * to the currentTransform member wich is used by the renderer to scale the object
+    * when rendering.  It does not scale the object itself.  For example if the renderable
+    * is an image, the image.width and image.height properties are unaltered but the currentTransform
+    * member will be changed.
+    * @param {number} x - a number representing the abscissa of the scaling vector.
+    * @param {number} [y=x] - a number representing the ordinate of the scaling vector.
+    * @returns {Spine} Reference to this object for method chaining
+    */
+    scale(x: number, y?: number | undefined): Spine;
+    /**
+     * update the bounding box for this spine object.
+     * (this will automatically update the bounds of the entire skeleton animation)
+     * @param {boolean} [absolute=true] - update the bounds size and position in (world) absolute coordinates
+     * @returns {Bounds} this shape bounding box Rectangle object
+     */
+    updateBounds(absolute?: boolean | undefined): Bounds;
+    /**
+     * update function (automatically called by melonJS).
+     * @param {number} dt - time since the last update in milliseconds.
+     * @returns {boolean} true if the renderable is dirty
+     */
+    update(dt: number): boolean;
     /**
      * draw this spine object
-     * @name draw
-     * @memberof Spine
-     * @protected
      * @param {CanvasRenderer|WebGLRenderer} renderer - a renderer instance
      * @param {Camera2d} [viewport] - the viewport to (re)draw
      */
-    protected draw(renderer: CanvasRenderer | WebGLRenderer): void;
-    setAnimationByIndex(track_index: any, index: any, loop?: boolean): void;
-    setAnimation(track_index: any, name: any, loop?: boolean): void;
-    addAnimationByIndex(track_index: any, index: any, loop?: boolean, delay?: number): void;
+    draw(renderer: CanvasRenderer | WebGLRenderer): void;
+    /**
+     * Sets the current animation for a track, discarding any queued animations.
+     * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
+     * @param {number} [index] - the animation index
+     * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
+     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     */
+    setAnimationByIndex(track_index?: number | undefined, index?: number | undefined, loop?: boolean | undefined): void;
+    /**
+     * Sets the current animation for a track, discarding any queued animations.
+     * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
+     * @param {string} [name] - the animation name
+     * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
+     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @example
+     * // set the current animation
+     * spineAlien.setAnimation(0, "death", true);
+     */
+    setAnimation(track_index?: number | undefined, name?: string | undefined, loop?: boolean | undefined): void;
+    /**
+     * Adds an animation to be played after the current or last queued animation for a track, and sets the track entry's mixDuration.
+     * @param {number} [delay=0] - If > 0, sets delay. If <= 0, the delay set is the duration of the previous track entry minus any mix duration plus the specified `delay` (ie the mix ends at (`delay` = 0) or before (`delay` < 0) the previous track entry duration). If the previous entry is looping, its next loop completion is used instead of its duration.
+     * @return A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
+     */
+    addAnimationByIndex(track_index: any, index: any, loop?: boolean, delay?: number | undefined): void;
     addAnimationByName(track_index: any, animationName: any, loop?: boolean, delay?: number): void;
     getSpinePosition(): Vector2d;
     setSpineSize(width: any, height: any): void;
+    width: any;
+    height: any;
     getSpineSize(): {
-        width: number;
-        height: number;
+        width: any;
+        height: any;
     };
-    setDefaultMixTime(mixTime: any): void;
+    /**
+     * Set the default mix duration to use when no mix duration has been defined between two animations.
+     * @param {number} mixTime
+     */
+    setDefaultMixTime(mixTime: number): void;
+    /**
+     * Sets a mix duration by animation name.
+     */
     setTransitionMixTime(firstAnimation: any, secondAnimation: any, mixTime: any): void;
-    setSkinByName(skinName: any): void;
+    /**
+     * Sets a skin by name.
+     * @param {string} skinName
+     * @example
+     * // create a new Spine Renderable
+     * let spineAlien = new Spine(100, 100, {atlasFile: "mix-and-match-pma.atlas", jsonFile: "mix-and-match-pro.json"});
+     *
+     * // set default animation
+     * spineAlien.setAnimation(0, "dance", true);
+     *
+     * // set default skin
+     * spineAlien.setSkinByName("full-skins/girl");
+     *
+     * // add it to the game world
+     * me.game.world.addChild(spineAlien);
+     */
+    setSkinByName(skinName: string): void;
+    /**
+     * Sets this slot to the setup pose.
+     */
     setToSetupPose(): void;
 }
+/**
+ * @classdesc
+ * An Asset Manager class to load spine assets
+ */
 declare class AssetManager {
-    constructor(pathPrefix?: string);
+    /**
+     * @param {string} [pathPrefix=""] - a default path prefix for assets location
+     */
+    constructor(pathPrefix?: string | undefined);
     asset_manager: any;
-    pathPrefix: string;
-    initAssetManager(): void;
-    setPrefix(pathPrefix: any): void;
-    loadAsset(atlas: any, skel: any): void;
+    pathPrefix: any;
+    /**
+     * set a default path prefix for assets location
+     * @see loadAsset
+     * @param {string} pathPrefix
+     */
+    setPrefix(pathPrefix: string): void;
+    /**
+     * define all spine assets to be loaded
+     * @see setPrefix
+     * @see loadAll
+     * @param {string} atlas
+     * @param {string} skel
+     * @example
+     * // load spine assets
+     * Spine.assetManager.setPrefix("data/spine/");
+     * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
+     * await Spine.assetManager.loadAll();
+     */
+    loadAsset(atlas: string, skel: string): void;
+    /**
+     * load all defined spine assets
+     * @see loadAsset
+     */
     loadAll(): any;
 }
-import { Renderable as Renderable$1 } from 'melonjs';
+/******************************************************************************
+ * Spine Runtimes License Agreement
+ * Last updated July 28, 2023. Replaces all prior versions.
+ *
+ * Copyright (c) 2013-2023, Esoteric Software LLC
+ *
+ * Integration of the Spine Runtimes into software or otherwise creating
+ * derivative works of the Spine Runtimes is permitted under the terms and
+ * conditions of Section 2 of the Spine Editor License Agreement:
+ * http://esotericsoftware.com/spine-editor-license
+ *
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software or
+ * otherwise create derivative works of the Spine Runtimes (collectively,
+ * "Products"), provided that each user of the Products must obtain their own
+ * Spine Editor license and redistribution of the Products in any form must
+ * include this license and copyright notice.
+ *
+ * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+ * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
+ * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *****************************************************************************/
+declare class Renderable {
+    constructor(vertices: any, numVertices: any, numFloats: any);
+    vertices: any;
+    numVertices: any;
+    numFloats: any;
+}
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 declare class AlphaTimeline extends CurveTimeline1 {
     slotIndex: any;
@@ -2213,9 +2411,10 @@ declare class PolygonBatcher {
     mesh: Mesh;
     srcColorBlend: any;
     srcAlphaBlend: any;
-    dstBlend: any;
+    dstColorBlend: any;
+    dstAlphaBlend: any;
     begin(shader: any): void;
-    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstBlend: any): void;
+    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstColorBlend: any, dstAlphaBlend: any): void;
     draw(texture: any, vertices: any, indices: any): void;
     flush(): void;
     end(): void;
@@ -2582,9 +2781,10 @@ declare class ShapeRenderer {
     mesh: Mesh;
     srcColorBlend: any;
     srcAlphaBlend: any;
-    dstBlend: any;
+    dstColorBlend: any;
+    dstAlphaBlend: any;
     begin(shader: any): void;
-    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstBlend: any): void;
+    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstColorBlend: any, dstAlphaBlend: any): void;
     setColor(color: any): void;
     setColorWith(r: any, g: any, b: any, a: any): void;
     point(x: any, y: any, color: any): void;
@@ -3149,40 +3349,6 @@ declare class SkeletonJson {
     readSequence(map: any): Sequence | null;
     readVertices(map: any, attachment: any, verticesLength: any): void;
     readAnimation(map: any, name: any, skeletonData: any): void;
-}
-/******************************************************************************
- * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
- *
- * Copyright (c) 2013-2023, Esoteric Software LLC
- *
- * Integration of the Spine Runtimes into software or otherwise creating
- * derivative works of the Spine Runtimes is permitted under the terms and
- * conditions of Section 2 of the Spine Editor License Agreement:
- * http://esotericsoftware.com/spine-editor-license
- *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
- * "Products"), provided that each user of the Products must obtain their own
- * Spine Editor license and redistribution of the Products in any form must
- * include this license and copyright notice.
- *
- * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
- * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *****************************************************************************/
-declare class Renderable {
-    constructor(vertices: any, numVertices: any, numFloats: any);
-    vertices: any;
-    numVertices: any;
-    numFloats: any;
 }
 declare class Vector2 {
     constructor(x?: number, y?: number);
@@ -4021,8 +4187,10 @@ declare class VertexAttribute {
 }
 declare class WebGLBlendModeConverter {
     static getDestGLBlendMode(blendMode: any): 1 | 771;
+    static getDestColorGLBlendMode(blendMode: any): 1 | 769 | 771;
+    static getDestAlphaGLBlendMode(blendMode: any, premultipliedAlpha?: boolean): 1 | 771;
     static getSourceColorGLBlendMode(blendMode: any, premultipliedAlpha?: boolean): 1 | 770 | 774;
-    static getSourceAlphaGLBlendMode(blendMode: any): 1 | 769 | 771;
+    static getSourceAlphaGLBlendMode(blendMode: any, premultipliedAlpha?: boolean): 1 | 770;
 }
 declare class WindowedMean {
     constructor(windowSize?: number);

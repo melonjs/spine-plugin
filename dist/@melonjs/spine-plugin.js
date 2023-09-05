@@ -1,11 +1,11 @@
 /*!
- * melonJS Spine plugin - v1.3.0
+ * melonJS Spine plugin - v1.4.0
  * http://www.melonjs.org
  * @melonjs/spine-plugin is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
  * @copyright (C) 2011 - 2023 AltByte Pte Ltd
  */
-import { event, video, Color as Color$1, Polygon, Math as Math$1, Renderable as Renderable$1, Vector2d } from 'melonjs';
+import { event, video, Color as Color$1, Polygon, Math as Math$1, utils, loader, Renderable as Renderable$1, Vector2d } from 'melonjs';
 
 /******************************************************************************
  * Spine Runtimes License Agreement
@@ -11292,21 +11292,39 @@ class WebGLBlendModeConverter {
             default: throw new Error("Unknown blend mode: " + blendMode);
         }
     }
+    static getDestColorGLBlendMode(blendMode) {
+        switch (blendMode) {
+            case BlendMode.Normal: return ONE_MINUS_SRC_ALPHA;
+            case BlendMode.Additive: return ONE;
+            case BlendMode.Multiply: return ONE_MINUS_SRC_ALPHA;
+            case BlendMode.Screen: return ONE_MINUS_SRC_COLOR;
+            default: throw new Error("Unknown blend mode: " + blendMode);
+        }
+    }
+    static getDestAlphaGLBlendMode(blendMode, premultipliedAlpha = false) {
+        switch (blendMode) {
+            case BlendMode.Normal: return ONE_MINUS_SRC_ALPHA;
+            case BlendMode.Additive: return premultipliedAlpha ? ONE_MINUS_SRC_ALPHA : ONE;
+            case BlendMode.Multiply: return ONE_MINUS_SRC_ALPHA;
+            case BlendMode.Screen: return ONE_MINUS_SRC_ALPHA;
+            default: throw new Error("Unknown blend mode: " + blendMode);
+        }
+    }
     static getSourceColorGLBlendMode(blendMode, premultipliedAlpha = false) {
         switch (blendMode) {
             case BlendMode.Normal: return premultipliedAlpha ? ONE : SRC_ALPHA;
             case BlendMode.Additive: return premultipliedAlpha ? ONE : SRC_ALPHA;
             case BlendMode.Multiply: return DST_COLOR;
-            case BlendMode.Screen: return ONE;
+            case BlendMode.Screen: return premultipliedAlpha ? ONE : SRC_ALPHA;
             default: throw new Error("Unknown blend mode: " + blendMode);
         }
     }
-    static getSourceAlphaGLBlendMode(blendMode) {
+    static getSourceAlphaGLBlendMode(blendMode, premultipliedAlpha = false) {
         switch (blendMode) {
-            case BlendMode.Normal: return ONE;
-            case BlendMode.Additive: return ONE;
-            case BlendMode.Multiply: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Screen: return ONE_MINUS_SRC_COLOR;
+            case BlendMode.Normal: return premultipliedAlpha ? SRC_ALPHA : ONE;
+            case BlendMode.Additive: return premultipliedAlpha ? SRC_ALPHA : ONE;
+            case BlendMode.Multiply: return ONE;
+            case BlendMode.Screen: return ONE;
             default: throw new Error("Unknown blend mode: " + blendMode);
         }
     }
@@ -12779,7 +12797,8 @@ class PolygonBatcher {
         let gl = this.context.gl;
         this.srcColorBlend = gl.SRC_ALPHA;
         this.srcAlphaBlend = gl.ONE;
-        this.dstBlend = gl.ONE_MINUS_SRC_ALPHA;
+        this.dstColorBlend = gl.ONE_MINUS_SRC_ALPHA;
+        this.dstAlphaBlend = gl.ONE_MINUS_SRC_ALPHA;
     }
     begin(shader) {
         if (this.isDrawing)
@@ -12790,23 +12809,24 @@ class PolygonBatcher {
         this.isDrawing = true;
         let gl = this.context.gl;
         gl.enable(gl.BLEND);
-        gl.blendFuncSeparate(this.srcColorBlend, this.dstBlend, this.srcAlphaBlend, this.dstBlend);
+        gl.blendFuncSeparate(this.srcColorBlend, this.dstColorBlend, this.srcAlphaBlend, this.dstAlphaBlend);
         if (PolygonBatcher.disableCulling) {
             this.cullWasEnabled = gl.isEnabled(gl.CULL_FACE);
             if (this.cullWasEnabled)
                 gl.disable(gl.CULL_FACE);
         }
     }
-    setBlendMode(srcColorBlend, srcAlphaBlend, dstBlend) {
-        if (this.srcColorBlend == srcColorBlend && this.srcAlphaBlend == srcAlphaBlend && this.dstBlend == dstBlend)
+    setBlendMode(srcColorBlend, srcAlphaBlend, dstColorBlend, dstAlphaBlend) {
+        if (this.srcColorBlend == srcColorBlend && this.srcAlphaBlend == srcAlphaBlend && this.dstColorBlend == dstColorBlend && this.dstAlphaBlend == dstAlphaBlend)
             return;
         this.srcColorBlend = srcColorBlend;
         this.srcAlphaBlend = srcAlphaBlend;
-        this.dstBlend = dstBlend;
+        this.dstColorBlend = dstColorBlend;
+        this.dstAlphaBlend = dstAlphaBlend;
         if (this.isDrawing) {
             this.flush();
             let gl = this.context.gl;
-            gl.blendFuncSeparate(srcColorBlend, dstBlend, srcAlphaBlend, dstBlend);
+            gl.blendFuncSeparate(srcColorBlend, dstColorBlend, srcAlphaBlend, dstAlphaBlend);
         }
     }
     draw(texture, vertices, indices) {
@@ -12917,7 +12937,8 @@ class ShapeRenderer {
         let gl = this.context.gl;
         this.srcColorBlend = gl.SRC_ALPHA;
         this.srcAlphaBlend = gl.ONE;
-        this.dstBlend = gl.ONE_MINUS_SRC_ALPHA;
+        this.dstColorBlend = gl.ONE_MINUS_SRC_ALPHA;
+        this.dstAlphaBlend = gl.ONE_MINUS_SRC_ALPHA;
     }
     begin(shader) {
         if (this.isDrawing)
@@ -12927,16 +12948,17 @@ class ShapeRenderer {
         this.isDrawing = true;
         let gl = this.context.gl;
         gl.enable(gl.BLEND);
-        gl.blendFuncSeparate(this.srcColorBlend, this.dstBlend, this.srcAlphaBlend, this.dstBlend);
+        gl.blendFuncSeparate(this.srcColorBlend, this.dstColorBlend, this.srcAlphaBlend, this.dstAlphaBlend);
     }
-    setBlendMode(srcColorBlend, srcAlphaBlend, dstBlend) {
+    setBlendMode(srcColorBlend, srcAlphaBlend, dstColorBlend, dstAlphaBlend) {
         this.srcColorBlend = srcColorBlend;
         this.srcAlphaBlend = srcAlphaBlend;
-        this.dstBlend = dstBlend;
+        this.dstColorBlend = dstColorBlend;
+        this.dstAlphaBlend = dstAlphaBlend;
         if (this.isDrawing) {
             this.flush();
             let gl = this.context.gl;
-            gl.blendFuncSeparate(srcColorBlend, dstBlend, srcAlphaBlend, dstBlend);
+            gl.blendFuncSeparate(srcColorBlend, dstColorBlend, srcAlphaBlend, dstAlphaBlend);
         }
     }
     setColor(color) {
@@ -13271,7 +13293,7 @@ class SkeletonDebugRenderer {
         let skeletonY = skeleton.y;
         let gl = this.context.gl;
         let srcFunc = this.premultipliedAlpha ? gl.ONE : gl.SRC_ALPHA;
-        shapes.setBlendMode(srcFunc, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        shapes.setBlendMode(srcFunc, gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         let bones = skeleton.bones;
         if (this.drawBones) {
             shapes.setColor(this.boneLineColor);
@@ -13589,7 +13611,7 @@ let SkeletonRenderer$2 = class SkeletonRenderer {
                 let slotBlendMode = slot.data.blendMode;
                 if (slotBlendMode != blendMode) {
                     blendMode = slotBlendMode;
-                    batcher.setBlendMode(WebGLBlendModeConverter.getSourceColorGLBlendMode(blendMode, premultipliedAlpha), WebGLBlendModeConverter.getSourceAlphaGLBlendMode(blendMode), WebGLBlendModeConverter.getDestGLBlendMode(blendMode));
+                    batcher.setBlendMode(WebGLBlendModeConverter.getSourceColorGLBlendMode(blendMode, premultipliedAlpha), WebGLBlendModeConverter.getSourceAlphaGLBlendMode(blendMode, premultipliedAlpha), WebGLBlendModeConverter.getDestColorGLBlendMode(blendMode), WebGLBlendModeConverter.getDestAlphaGLBlendMode(blendMode, premultipliedAlpha));
                 }
                 if (clipper.isClipping()) {
                     clipper.clipTriangles(renderable.vertices, renderable.numFloats, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint);
@@ -14185,7 +14207,7 @@ class LoadingScreen {
         let gl = renderer.context.gl;
         renderer.resize(ResizeMode.Expand);
         renderer.camera.position.set(canvas.width / 2, canvas.height / 2, 0);
-        renderer.batcher.setBlendMode(gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        renderer.batcher.setBlendMode(gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         if (complete) {
             this.fadeOut += this.timeKeeper.delta * (this.timeKeeper.totalTime < 1 ? 2 : 1);
             if (this.fadeOut > FADE_OUT)
@@ -14890,28 +14912,50 @@ var spineCanvas = {
     WindowedMean: WindowedMean
 };
 
+/**
+ * @classdesc
+ * An Asset Manager class to load spine assets
+ */
 class AssetManager {
     asset_manager;
     pathPrefix;
 
+    /**
+     * @param {string} [pathPrefix=""] - a default path prefix for assets location
+     */
     constructor(pathPrefix = "") {
-        event.once(event.VIDEO_INIT, this.initAssetManager.bind(this));
-        this.pathPrefix = pathPrefix;
+        event.once(event.VIDEO_INIT, () => {
+            this.pathPrefix = pathPrefix;
+            if (video.renderer.WebGLVersion >= 1) {
+                this.asset_manager = new AssetManager$2(video.renderer.getContext(), this.pathPrefix);
+            } else {
+                // canvas renderer
+                this.asset_manager = new AssetManager$1(this.pathPrefix);
+            }
+        });
     }
 
-    initAssetManager() {
-        if (video.renderer.WebGLVersion >= 1) {
-            this.asset_manager = new AssetManager$2(video.renderer.getContext(), this.pathPrefix);
-        } else {
-            // canvas renderer
-            this.asset_manager = new AssetManager$1(this.pathPrefix);
-        }
-    }
-
+    /**
+     * set a default path prefix for assets location
+     * @see loadAsset
+     * @param {string} pathPrefix
+     */
     setPrefix(pathPrefix) {
-        this.asset_manager.pathPrefix = pathPrefix;
+        this.asset_manager.pathPrefix =  this.pathPrefix = pathPrefix;
     }
 
+    /**
+     * define all spine assets to be loaded
+     * @see setPrefix
+     * @see loadAll
+     * @param {string} atlas
+     * @param {string} skel
+     * @example
+     * // load spine assets
+     * Spine.assetManager.setPrefix("data/spine/");
+     * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
+     * await Spine.assetManager.loadAll();
+     */
     loadAsset(atlas, skel) {
         if (atlas) {
             this.asset_manager.loadTextureAtlas(atlas);
@@ -14924,6 +14968,10 @@ class AssetManager {
         }
     }
 
+    /**
+     * load all defined spine assets
+     * @see loadAsset
+     */
     loadAll() {
         return this.asset_manager.loadAll();
     }
@@ -15147,8 +15195,152 @@ class SkeletonRenderer {
     }
 }
 
+var name = "@melonjs/spine-plugin";
+var version = "1.4.0";
+var description = "melonJS Spine plugin";
+var homepage = "https://github.com/melonjs/spine-plugin#readme";
+var type = "module";
+var keywords = [
+	"2D",
+	"HTML5",
+	"javascript",
+	"TypeScript",
+	"ES6",
+	"Canvas",
+	"WebGL",
+	"WebGL2",
+	"melonjs",
+	"plugin",
+	"spine",
+	"spine-runtimes",
+	"spine-animation",
+	"esotericsoftware"
+];
+var repository = {
+	type: "git",
+	url: "git+https://github.com/melonjs/spine-plugin.git"
+};
+var bugs = {
+	url: "https://github.com/melonjs/spine-plugin/issues"
+};
+var license = "MIT";
+var author = "AltByte Pte Ltd";
+var funding = "https://github.com/sponsors/melonjs";
+var engines = {
+	node: ">= 19"
+};
+var main = "dist/@melonjs/spine-plugin.js";
+var module = "dist/@melonjs/spine-plugin.js";
+var types = "dist/@melonjs/spine-plugin.d.ts";
+var sideEffects = false;
+var files = [
+	"dist/",
+	"src/",
+	"package.json",
+	"README.md",
+	"LICENSE",
+	"CHANGELOG.md"
+];
+var peerDependencies = {
+	melonjs: "^15.10.0"
+};
+var dependencies = {
+	"@esotericsoftware/spine-canvas": "^4.2.19",
+	"@esotericsoftware/spine-core": "^4.2.19",
+	"@esotericsoftware/spine-webgl": "^4.2.19"
+};
+var devDependencies = {
+	"@babel/eslint-parser": "^7.22.15",
+	"@babel/plugin-syntax-import-assertions": "^7.22.5",
+	"@rollup/plugin-commonjs": "^25.0.4",
+	"@rollup/plugin-json": "^6.0.0",
+	"@rollup/plugin-node-resolve": "^15.2.1",
+	"@rollup/plugin-replace": "^5.0.2",
+	"del-cli": "^5.1.0",
+	eslint: "^8.48.0",
+	"eslint-plugin-jsdoc": "^46.5.1",
+	rollup: "^3.28.1",
+	"rollup-plugin-bundle-size": "^1.0.3",
+	typescript: "^5.2.2"
+};
+var scripts = {
+	build: "npm run clean && npm run lint && rollup -c --silent && npm run types",
+	lint: "eslint src/**.js rollup.config.mjs",
+	serve: "python3 -m http.server",
+	test: "npm run serve",
+	prepublishOnly: "npm run build",
+	clean: "del-cli --force dist/*",
+	types: "tsc"
+};
+var _package = {
+	name: name,
+	version: version,
+	description: description,
+	homepage: homepage,
+	type: type,
+	keywords: keywords,
+	repository: repository,
+	bugs: bugs,
+	license: license,
+	author: author,
+	funding: funding,
+	engines: engines,
+	main: main,
+	module: module,
+	types: types,
+	sideEffects: sideEffects,
+	files: files,
+	peerDependencies: peerDependencies,
+	dependencies: dependencies,
+	devDependencies: devDependencies,
+	scripts: scripts
+};
+
 let assetManager = new AssetManager();
 
+// a custom Spine parser for melonJS preloader
+function spineParser(data, onload, onerror) {
+
+    // decompose data.src for the spine loader
+    const ext = utils.file.getExtension(data.src);
+    const basename = utils.file.getBasename(data.src);
+    const path = utils.file.getPath(data.src);
+    const filename = basename + "." + ext;
+
+    // set url prefix
+    assetManager.setPrefix(path);
+
+    // load asset
+    switch (ext) {
+        case "atlas":
+            assetManager.asset_manager.loadTextureAtlas(filename, onload, onerror);
+            break;
+        case "json":
+            assetManager.asset_manager.loadText(filename, onload, onerror);
+            break;
+        case "skel":
+            assetManager.asset_manager.loadBinary(filename, onload, onerror);
+            break;
+        default:
+            throw "Spine plugin: unknown extension when preloading spine assets";
+    }
+
+    return 1;
+}
+
+// set the spine custom parser
+loader.setParser("spine", spineParser);
+
+// hello world
+event.once(event.VIDEO_INIT, () => {
+    console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
+});
+
+/**
+ * @classdesc
+ * An object to display a Spine animated skeleton on screen.
+ * @augments Renderable
+ */
 class Spine extends Renderable$1 {
     runtime;
     skeleton;
@@ -15159,6 +15351,40 @@ class Spine extends Renderable$1 {
     boneOffset;
     boneSize;
 
+    /**
+     * @param {number} x - the x coordinates of the Spine object
+     * @param {number} y - the y coordinates of the Spine object
+     * @param {object} settings - Configuration parameters for the Spine object
+     * @param {number} [settings.atlasFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [settings.jsonFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [settings.mixTime = 0.2] - the default mix duration to use when no mix duration has been defined between two animations.
+     * @example
+    * import * as Spine from '@melonjs/spine-plugin';
+    * import * as me from 'melonjs';
+    *
+    * // prepare/declare assets for the preloader
+    * const DataManifest = [
+    *     {
+    *         "name": "alien-ess.json",
+    *         "type": "spine",
+    *         "src": "data/spine/alien-ess.json"
+    *     },
+    *     {
+    *         "name": "alien.atlas",
+    *         "type": "spine",
+    *         "src": "data/spine/alien.atlas"
+    *     },
+    * ]
+    *
+    * // create a new Spine Renderable
+    * let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
+    *
+    * // set default animation
+    * spineAlien.setAnimation(0, "death", true);
+    *
+    * // add it to the game world
+    * me.game.world.addChild(spineAlien);
+    */
     constructor(x, y, settings) {
         super(x, y, settings.width, settings.height);
 
@@ -15179,20 +15405,26 @@ class Spine extends Renderable$1 {
             this.pos.z = settings.z;
         }
 
-        this.scaleValue = {x: 1, y: 1};
+        // use internally when calulcating bounds
         this.boneOffset = new Vector2();
         this.boneSize = new Vector2();
 
-        this.mixTime = settings.mixTime || 0.2;
+        // default mixTime
+        this.mixTime = typeof settings.mixTime !== "undefined" ? settings.mixTime :  0.2;
+
 
         if (settings.jsonFile) {
             this.jsonFile = settings.jsonFile;
             this.atlasFile = settings.atlasFile;
-
             this.setSkeleton(this.atlasFile, this.jsonFile);
         }
     }
 
+    /**
+     * Whether to enabler the debug mode when rendering the spine object
+     * @default false
+     * @type {boolean}
+     */
     get debugRendering() {
         return this.skeletonRenderer.debugRendering;
     }
@@ -15201,14 +15433,25 @@ class Spine extends Renderable$1 {
         this.skeletonRenderer.debugRendering = value;
     }
 
+    /**
+     * set and load the given skeleton atlas and json definition files
+     * (use this if you did not specify any json or atlas through the constructor)
+     * @param {number} [atlasFile] - the name of the atlasFile to be used to create this spine animation
+     * @param {number} [jsonFile] - the name of the atlasFile to be used to create this spine animation
+     * @example
+     * // create a new Spine Renderable
+     * let spineAlien = new Spine(100, 100);
+     *
+     * // set the skeleton
+     * spineAlien.setSkeleton("alien.atlas", "alien-ess.json");
+     *
+     * // set default animation
+     * spineAlien.setAnimation(0, "death", true);
+     *
+     * // add it to the game world
+     * me.game.world.addChild(spineAlien);
+     */
     setSkeleton(atlasFile, jsonFile) {
-        this.loadSpineAssets(atlasFile, jsonFile);
-        this.root = this.skeleton.getRootBone();
-         // Spine uses Y-up, melonJS uses Y-down
-        this.root.scaleY *= -1;
-    }
-
-    loadSpineAssets(atlasFile, jsonFile) {
         // Create the texture atlas and skeleton data.
         let atlas = this.assetManager.require(atlasFile);
         let atlasLoader = new this.runtime.AtlasAttachmentLoader(atlas);
@@ -15224,20 +15467,50 @@ class Spine extends Renderable$1 {
         var animationStateData = new this.runtime.AnimationStateData(this.skeleton.data);
         animationStateData.defaultMix = this.mixTime;
         this.animationState = new this.runtime.AnimationState(animationStateData);
+
+        // get a reference to the root bone
+        this.root = this.skeleton.getRootBone();
+        // Spine uses Y-up, melonJS uses Y-down
+        this.root.scaleY *= -1;
+
+        // mark the object as dirty
+        this.isDirty = true;
     }
 
+     /**
+     * Rotate this Spine object by the specified angle (in radians).
+     * @param {number} angle - The angle to rotate (in radians)
+     * @param {Vector2d|ObservableVector2d} [v] - an optional point to rotate around
+     * @returns {Spine} Reference to this object for method chaining
+     */
     rotate(angle, v) {
         // rotation for rootBone is in degrees (anti-clockwise)
         this.skeleton.getRootBone().rotation -= Math$1.radToDeg(angle) + 90;
         // melonJS rotate method takes radians
-        super.rotate(angle, v);
+        return super.rotate(angle, v);
     }
 
+     /**
+     * scale the Spine object around his anchor point.  Scaling actually applies changes
+     * to the currentTransform member wich is used by the renderer to scale the object
+     * when rendering.  It does not scale the object itself.  For example if the renderable
+     * is an image, the image.width and image.height properties are unaltered but the currentTransform
+     * member will be changed.
+     * @param {number} x - a number representing the abscissa of the scaling vector.
+     * @param {number} [y=x] - a number representing the ordinate of the scaling vector.
+     * @returns {Spine} Reference to this object for method chaining
+     */
     scale(x, y = x) {
-        this.scaleValue = {x, y};
-        super.scale(x, y);
+        // untested
+        return super.scale(x, y);
     }
 
+    /**
+     * update the bounding box for this spine object.
+     * (this will automatically update the bounds of the entire skeleton animation)
+     * @param {boolean} [absolute=true] - update the bounds size and position in (world) absolute coordinates
+     * @returns {Bounds} this shape bounding box Rectangle object
+     */
     updateBounds(absolute = true) {
         if (this.isRenderable) {
             let bounds = this.getBounds();
@@ -15313,9 +15586,6 @@ class Spine extends Renderable$1 {
 
     /**
      * draw this spine object
-     * @name draw
-     * @memberof Spine
-     * @protected
      * @param {CanvasRenderer|WebGLRenderer} renderer - a renderer instance
      * @param {Camera2d} [viewport] - the viewport to (re)draw
      */
@@ -15323,6 +15593,13 @@ class Spine extends Renderable$1 {
         this.skeletonRenderer.draw(renderer, this.skeleton);
     }
 
+    /**
+     * Sets the current animation for a track, discarding any queued animations.
+     * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
+     * @param {number} [index] - the animation index
+     * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
+     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     */
     setAnimationByIndex(track_index, index, loop = false) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
@@ -15331,10 +15608,25 @@ class Spine extends Renderable$1 {
         }
     }
 
+    /**
+     * Sets the current animation for a track, discarding any queued animations.
+     * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
+     * @param {string} [name] - the animation name
+     * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
+     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @example
+     * // set the current animation
+     * spineAlien.setAnimation(0, "death", true);
+     */
     setAnimation(track_index, name, loop = false) {
         this.animationState.setAnimation(track_index, name, loop);
     }
 
+    /**
+     * Adds an animation to be played after the current or last queued animation for a track, and sets the track entry's mixDuration.
+     * @param {number} [delay=0] - If > 0, sets delay. If <= 0, the delay set is the duration of the previous track entry minus any mix duration plus the specified `delay` (ie the mix ends at (`delay` = 0) or before (`delay` < 0) the previous track entry duration). If the previous entry is looping, its next loop completion is used instead of its duration.
+     * @return A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
+     */
     addAnimationByIndex(track_index, index, loop = false, delay = 0) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
@@ -15363,18 +15655,44 @@ class Spine extends Renderable$1 {
         };
     }
 
+    /**
+     * Set the default mix duration to use when no mix duration has been defined between two animations.
+     * @param {number} mixTime
+     */
     setDefaultMixTime(mixTime) {
-        this.animationState.data.defaultMix = mixTime;
+        this.animationState.data.defaultMix = this.mixTime = mixTime;
     }
 
+    /**
+     * Sets a mix duration by animation name.
+     */
     setTransitionMixTime(firstAnimation, secondAnimation, mixTime) {
         this.animationState.setMix(firstAnimation, secondAnimation, mixTime);
     }
 
+    /**
+     * Sets a skin by name.
+     * @param {string} skinName
+     * @example
+     * // create a new Spine Renderable
+     * let spineAlien = new Spine(100, 100, {atlasFile: "mix-and-match-pma.atlas", jsonFile: "mix-and-match-pro.json"});
+     *
+     * // set default animation
+     * spineAlien.setAnimation(0, "dance", true);
+     *
+     * // set default skin
+     * spineAlien.setSkinByName("full-skins/girl");
+     *
+     * // add it to the game world
+     * me.game.world.addChild(spineAlien);
+     */
     setSkinByName(skinName) {
         this.skeleton.setSkinByName(skinName);
     }
 
+    /**
+     * Sets this slot to the setup pose.
+     */
     setToSetupPose() {
         this.skeleton.setToSetupPose();
     }
