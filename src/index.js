@@ -62,6 +62,7 @@ export default class Spine extends Renderable {
     root;
     boneOffset;
     boneSize;
+    currentTrack;
 
     /**
      * @param {number} x - the x coordinates of the Spine object
@@ -316,7 +317,7 @@ export default class Spine extends Renderable {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
         } else {
-            this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
+            return this.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
         }
     }
 
@@ -331,7 +332,22 @@ export default class Spine extends Renderable {
      * spineAlien.setAnimation(0, "death", true);
      */
     setAnimation(track_index, name, loop = false) {
-        this.animationState.setAnimation(track_index, name, loop);
+        this.currentTrack = this.animationState.setAnimation(track_index, name, loop);
+        return this.currentTrack;
+    }
+
+    /**
+     * return true if the given animation name is the current running animation for the current track.
+     * @name isCurrentAnimation
+     * @param {string} name - animation name
+     * @returns {boolean}
+     * @example
+     * if (!this.isCurrentAnimation("death")) {
+     *     // do something funny...
+     * }
+     */
+    isCurrentAnimation(name) {
+        return typeof this.currentTrack !== "undefined" && this.currentTrack.animation.name === name;
     }
 
     /**
@@ -343,7 +359,7 @@ export default class Spine extends Renderable {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
         } else {
-            this.animationState.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
+            this.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
         }
     }
 

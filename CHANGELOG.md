@@ -2,6 +2,9 @@
 
 ## 1.5.0 - 2023-09-xx
 
+- fix the `addAnimation()` method not returning the corresponding set TrackEntry
+- add a `isCurrentAnimation()` that returns true if the give name corresponding to the current track current animation
+
 ## 1.4.0 - 2023-09-05
 
 - add support for loading spine assets through the melonJS preloader (see README)
