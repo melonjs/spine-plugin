@@ -10,8 +10,9 @@
       "removeComments": false,
       "strict": true,
       "noImplicitAny": true,
-      "moduleResolution": "node"
+      "moduleResolution": "node",
+      "resolveJsonModule": true
   },
-  "include": ["dist/@melonjs/*.js"],
+  "include": ["dist/@melonjs/**.js"],
   "exclude": ["node_modules"]
 }

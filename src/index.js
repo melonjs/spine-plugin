@@ -1,10 +1,12 @@
-import { Math, Renderable, Vector2d, video, loader, utils } from "melonjs";
+import { Math, Renderable, Vector2d, video, loader, utils, event } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 import { Vector2 } from "@esotericsoftware/spine-core";
 
 import AssetManager from "./AssetManager.js";
 import SkeletonRenderer from "./SkeletonRenderer.js";
+
+import { name, version, dependencies, homepage } from "../package.json";
 
 export let assetManager = new AssetManager();
 
@@ -40,6 +42,11 @@ function spineParser(data, onload, onerror) {
 
 // set the spine custom parser
 loader.setParser("spine", spineParser);
+
+// hello world
+event.once(event.VIDEO_INIT, () => {
+    console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
+});
 
 /**
  * @classdesc

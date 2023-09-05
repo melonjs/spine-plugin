@@ -4,6 +4,7 @@
 
 - add support for loading spine assets through the melonJS preloader (see README)
 - add inline documentation for the Spine class, properties and methods
+- console now display both the plugin and spine runtime versions
 
 ## 1.3.0 - 2023-08-28
 
