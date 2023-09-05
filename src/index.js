@@ -63,6 +63,10 @@ export default class Spine extends Renderable {
     boneOffset;
     boneSize;
     currentTrack;
+    isSpineFlipped = {
+        x : false,
+        y : false
+    };
 
     /**
      * @param {number} x - the x coordinates of the Spine object
@@ -188,6 +192,34 @@ export default class Spine extends Renderable {
 
         // mark the object as dirty
         this.isDirty = true;
+    }
+
+    /**
+     * flip the Spine skeleton on the horizontal axis (around its center)
+     * @param {boolean} [flip=true] - `true` to flip this Spine object.
+     * @returns {Spine} Reference to this object for method chaining
+     */
+    flipX(flip = true) {
+        if (this.isSpineFlipped.x !== flip) {
+            this.isSpineFlipped.x = flip;
+            this.root.scaleX *= -1;
+            this.isDirty = true;
+        }
+        return this;
+    }
+
+    /**
+     * flip the Spine skeleton on the vertical axis (around its center)
+     * @param {boolean} [flip=true] - `true` to flip this Spine object.
+     * @returns {Spine} Reference to this object for method chaining
+     */
+    flipY(flip = true) {
+        if (this.isSpineFlipped.y !== flip) {
+            this.isSpineFlipped.y = flip;
+            this.root.scaleY *= -1;
+            this.isDirty = true;
+        }
+        return this;
     }
 
      /**

@@ -3,6 +3,7 @@
 ## 1.5.0 - 2023-09-xx
 
 - fix the `addAnimation()` method not returning the corresponding set TrackEntry
+- fix the base renderable `flip[X/Y]` method when used/applied to the Spine renderable
 - add a `isCurrentAnimation()` that returns true if the give name corresponding to the current track current animation
 
 ## 1.4.0 - 2023-09-05
