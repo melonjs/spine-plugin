@@ -177,8 +177,8 @@ export default class Spine extends Renderable {
 
         // Instantiate a new skeleton based on the atlas and skeleton data.
         this.skeleton = new this.runtime.Skeleton(skeletonData);
-        this.skeleton.setToSetupPose();
-        this.skeleton.updateWorldTransform();
+
+        this.setToSetupPose();
 
         // Setup an animation state with a default mix of 0.2 seconds.
         var animationStateData = new this.runtime.AnimationStateData(this.skeleton.data);
@@ -187,11 +187,6 @@ export default class Spine extends Renderable {
 
         // get a reference to the root bone
         this.root = this.skeleton.getRootBone();
-        // Spine uses Y-up, melonJS uses Y-down
-        this.root.scaleY *= -1;
-
-        // mark the object as dirty
-        this.isDirty = true;
     }
 
     /**
@@ -451,9 +446,17 @@ export default class Spine extends Renderable {
     }
 
     /**
-     * Sets this slot to the setup pose.
+     * Reset this slot to the setup pose.
      */
     setToSetupPose() {
         this.skeleton.setToSetupPose();
+        // Spine uses Y-up, melonJS uses Y-down
+        this.skeleton.getRootBone().scaleY *= -1;
+        this.skeleton.updateWorldTransform();
+        // reset flip flags
+        this.isSpineFlipped.y = false;
+        this.isSpineFlipped.x = false;
+        // mark the object as dirty
+        this.isDirty = true;
     }
 }
