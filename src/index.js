@@ -475,6 +475,8 @@ export default class Spine extends Renderable {
         // reset flip flags
         this.isSpineFlipped.y = false;
         this.isSpineFlipped.x = false;
+        // reset reference to current track entry
+        this.currentTrack = undefined;
         // mark the object as dirty
         this.isDirty = true;
     }
