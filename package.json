@@ -49,9 +49,9 @@
     "melonjs": "^15.10.0"
   },
   "dependencies": {
-    "@esotericsoftware/spine-canvas": "^4.2.19",
-    "@esotericsoftware/spine-core": "^4.2.19",
-    "@esotericsoftware/spine-webgl": "^4.2.19"
+    "@esotericsoftware/spine-canvas": "^4.2.21",
+    "@esotericsoftware/spine-core": "^4.2.21",
+    "@esotericsoftware/spine-webgl": "^4.2.21"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.22.15",
