@@ -62,11 +62,30 @@ export default class Spine extends Renderable {
     root;
     boneOffset;
     boneSize;
-    currentTrack;
     isSpineFlipped = {
         x : false,
         y : false
     };
+
+    /**
+     * Stores settings and other state for the playback of the current animation (if any).
+     * @type {TrackEntry}
+     * @see http://en.esotericsoftware.com/spine-api-reference#TrackEntry
+     * @see setAnimation
+     * @default undefined
+     * @example
+     * // set a default animation to "run"
+     * this.setAnimation(0, "run", true);
+     * ...
+     * ...
+     * // pause the animation
+     * this.currentTrack.timeScale = 0;
+     * ...
+     * ...
+     * // resume the animation
+     * this.currentTrack.timeScale = 1;
+     */
+    currentTrack;
 
     /**
      * @param {number} x - the x coordinates of the Spine object
@@ -338,7 +357,7 @@ export default class Spine extends Renderable {
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
      * @param {number} [index] - the animation index
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
-     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      */
     setAnimationByIndex(track_index, index, loop = false) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
@@ -353,7 +372,7 @@ export default class Spine extends Renderable {
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
      * @param {string} [name] - the animation name
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
-     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      * @example
      * // set the current animation
      * spineAlien.setAnimation(0, "death", true);
@@ -380,13 +399,13 @@ export default class Spine extends Renderable {
     /**
      * Adds an animation to be played after the current or last queued animation for a track, and sets the track entry's mixDuration.
      * @param {number} [delay=0] - If > 0, sets delay. If <= 0, the delay set is the duration of the previous track entry minus any mix duration plus the specified `delay` (ie the mix ends at (`delay` = 0) or before (`delay` < 0) the previous track entry duration). If the previous entry is looping, its next loop completion is used instead of its duration.
-     * @return A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
+     * @return {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
      */
     addAnimationByIndex(track_index, index, loop = false, delay = 0) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
         } else {
-            this.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
+            return this.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
         }
     }
 
