@@ -1,6 +1,6 @@
 # melonJS Spine Plugin
 
-a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementation for [melonJS 2](http://www.melonjs.org)
+a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.x plugin implementation for [melonJS 2](http://www.melonjs.org)
 
 ![melonjs-spine-gif](https://github.com/melonjs/spine-plugin/assets/4033090/dc259c8e-def6-419e-83a9-cda374715686)
 
@@ -11,7 +11,7 @@ a [Spine](http://en.esotericsoftware.com/spine-in-depth) 4.1 plugin implementati
 [![jsDeliver](https://data.jsdelivr.com/v1/package/npm/@melonjs/spine-plugin/badge?style=rounded)](https://www.jsdelivr.com/package/npm/@melonjs/spine-plugin)
 
 
-Installation
+## Installation
 -------------------------------------------------------------------------------
 this plugin is already bundled with the required Spine [4.x runtime](package.json#dependencies), so there is no need to install it separately.
 >Note: this plugin requires melonJS version 15.10 or higher.
@@ -52,7 +52,18 @@ me.game.world.addChild(spineAlien);
 
 for more details, see a complete usage example in the [test](test) folder
 
-Questions, need help ?
+## Compatibility
+-------------------------------------------------------------------------------
+
+below is the compatibility version matrix :
+
+| melonJS | @melonjs/spine-plugin | spine-runtime |
+|---|---|---|
+| v15.10.x (or higher) | v1.x | v4.1, v4.2-beta |
+
+>Note: the current version of the spine-plugin is bundled with the 4.2.x beta version of the Spine runtime, which is for now backward compatible with the Spine 4.1 runtime (from a player/rendering point of view). 
+
+## Questions, need help ?
 -------------------------------------------------------------------------------
 If you need technical support, you can contact us through the following channels :
 * Forums: with melonJS 2 we moved to a new discourse [forum](https://melonjs.discourse.group), but we can still also find the previous one [here](http://www.html5gamedevs.com/forum/32-melonjs/)

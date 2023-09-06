@@ -6,6 +6,7 @@
 - fix the base renderable `flip[X/Y]` method when used/applied to the Spine renderable
 - add a `isCurrentAnimation()` that returns true if the give name corresponding to the current track current animation
 - expose the `currentTrack` property to access the corresponding current animation track entry
+- clarify in the readme that the current plugin support both the 4.1 and 4.2-beta Spine runtime versions
 
 ## 1.4.0 - 2023-09-05
 
