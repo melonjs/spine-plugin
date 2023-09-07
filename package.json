@@ -63,7 +63,7 @@
     "del-cli": "^5.1.0",
     "eslint": "^8.48.0",
     "eslint-plugin-jsdoc": "^46.5.1",
-    "rollup": "^3.28.1",
+    "rollup": "^3.29.0",
     "rollup-plugin-bundle-size": "^1.0.3",
     "typescript": "^5.2.2"
   },
