@@ -7,6 +7,8 @@
 - add a `isCurrentAnimation()` that returns true if the give name corresponding to the current track current animation
 - expose the `currentTrack` property to access the corresponding current animation track entry
 - clarify in the readme that the current plugin support both the 4.1 and 4.2-beta Spine runtime versions
+- the spine-plugin now requires to be properly registered using `me.plugin.register(SpinePlugin);`
+- add check for minimum melonJS version when the plugin is registered
 
 ## 1.4.0 - 2023-09-05
 

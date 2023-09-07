@@ -1,4 +1,4 @@
-import { Math, Renderable, Vector2d, video, loader, utils, event } from "melonjs";
+import { Math, Renderable, Vector2d, video, loader, utils, plugin } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 import { Vector2 } from "@esotericsoftware/spine-core";
@@ -6,7 +6,7 @@ import { Vector2 } from "@esotericsoftware/spine-core";
 import AssetManager from "./AssetManager.js";
 import SkeletonRenderer from "./SkeletonRenderer.js";
 
-import { name, version, dependencies, homepage } from "../package.json";
+import { name, version, dependencies, homepage, peerDependencies } from "../package.json";
 
 export let assetManager = new AssetManager();
 
@@ -40,17 +40,30 @@ function spineParser(data, onload, onerror) {
     return 1;
 }
 
-// set the spine custom parser
-loader.setParser("spine", spineParser);
+/**
+ * @classdesc
+ * a Spine 4.x plugin implementation for melonJS
+ * @augments plugin.BasePlugin
+ */
+export class SpinePlugin extends plugin.BasePlugin {
+    constructor() {
+        // call the super constructor
+        super();
 
-// hello world
-event.once(event.VIDEO_INIT, () => {
-    console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
-});
+        // minimum melonJS version expected to run this plugin
+        this.version = peerDependencies["melonjs"];
+
+        // hello world
+        console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
+
+        // set the spine custom parser
+        loader.setParser("spine", spineParser);
+    }
+}
 
 /**
  * @classdesc
- * An object to display a Spine animated skeleton on screen.
+ * An renderable object to render Spine animated skeleton.
  * @augments Renderable
  */
 export default class Spine extends Renderable {

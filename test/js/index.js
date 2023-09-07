@@ -3,6 +3,7 @@ import { DebugPanelPlugin } from "debugPlugin";
 
 import DataManifest from './manifest.js'
 import SpineRenderable from "./renderables/spine.js";
+import { SpinePlugin } from 'spinePlugin';
 
 /**
  *
@@ -29,7 +30,8 @@ export default function player(x, y, atlasFile, jsonFile, defaultAnimation, skin
 	});
 
 	// register the debug plugin
-	me.plugin.register(DebugPanelPlugin, "debugPanel");
+	me.plugin.register(DebugPanelPlugin);
+	me.plugin.register(SpinePlugin);
 
 	// allow cross-origin for image/texture loading
 	me.loader.crossOrigin = "anonymous";

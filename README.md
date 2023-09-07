@@ -22,8 +22,11 @@ To install the plugin using npm :
 
 Then import and use the plugin in your project. For example:
 ```JavaScript
-import * as Spine from '@melonjs/spine-plugin';
+import { SpinePlugin } from '@melonjs/spine-plugin';
 import * as me from 'melonjs';
+
+// register the plugin
+me.plugin.register(SpinePlugin);
 
 // prepare/declare assets for the preloader
 const DataManifest = [
@@ -37,16 +40,24 @@ const DataManifest = [
         "type": "spine",
         "src": "data/spine/alien.atlas"
     },
-]
+];
 
-// create a new Spine Renderable
-let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
+// import default Spine class
+import Spine from '@melonjs/spine-plugin';
 
-// set default animation
-spineAlien.setAnimation(0, "death", true);
+// preload assets
+me.loader.preload(DataManifest, async function() {
 
-// add it to the game world
-me.game.world.addChild(spineAlien);
+    // create a new Spine Renderable
+    let spineAlien = new Spine(100, 100, {atlasFile: "alien.atlas", jsonFile: "alien-ess.json"});
+
+    // set default animation
+    spineAlien.setAnimation(0, "death", true);
+
+    // add it to the game world
+    me.game.world.addChild(spineAlien);
+
+}
 ```
 >Note: use "spine" as a value for the `type` property to indicate which assets and are actual Spine assets and to be loaded using the plugin (requires version 1.4.0 or higher of the Spine plugin)
 
