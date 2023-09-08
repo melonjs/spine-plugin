@@ -1,4 +1,4 @@
-import { event, video } from "melonjs";
+import { event } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 
@@ -14,10 +14,10 @@ export default class AssetManager {
      * @param {string} [pathPrefix=""] - a default path prefix for assets location
      */
     constructor(pathPrefix = "") {
-        event.once(event.VIDEO_INIT, () => {
+        event.once(event.VIDEO_INIT, (renderer) => {
             this.pathPrefix = pathPrefix;
-            if (video.renderer.WebGLVersion >= 1) {
-                this.asset_manager = new spineWebGL.AssetManager(video.renderer.getContext(), this.pathPrefix);
+            if (renderer.WebGLVersion >= 1) {
+                this.asset_manager = new spineWebGL.AssetManager(renderer.getContext(), this.pathPrefix);
             } else {
                 // canvas renderer
                 this.asset_manager = new spineCanvas.AssetManager(this.pathPrefix);
