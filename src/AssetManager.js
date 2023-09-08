@@ -41,46 +41,21 @@ export default class AssetManager {
      * @param {string} atlas
      * @param {string} skel
      * @example
-     * // "manually" load spine assets
+     * // load spine assets
      * Spine.assetManager.setPrefix("data/spine/");
      * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
      * await Spine.assetManager.loadAll();
      */
     loadAsset(atlas, skel) {
         if (atlas) {
-            this.loadTextureAtlas(atlas);
+            this.asset_manager.loadTextureAtlas(atlas);
         }
 
         if (skel.endsWith(".skel")) {
-            this.loadBinary(skel);
+            this.asset_manager.loadBinary(skel);
         } else {
-            this.loadText(skel);
+            this.asset_manager.loadText(skel);
         }
-    }
-
-    /**
-     * load the given texture atlas
-     * @param {string} atlas
-     */
-    loadTextureAtlas(atlas, onload, onerror) {
-        return this.asset_manager.loadTextureAtlas(atlas, onload, onerror);
-    }
-
-
-    /**
-     * load the given skeleton .skel file
-     * @param {string} skel
-     */
-    loadBinary(skel, onload, onerror) {
-        return this.asset_manager.loadBinary(skel, onload, onerror);
-    }
-
-    /**
-     * load the given skeleton binary file
-     * @param {string} skel
-     */
-    loadText(skel, onload, onerror) {
-        return this.asset_manager.loadText(skel, onload, onerror);
     }
 
     /**
@@ -89,13 +64,5 @@ export default class AssetManager {
      */
     loadAll() {
         return this.asset_manager.loadAll();
-    }
-
-    /**
-     * get the loaded skeleton data
-     * @param {string} path
-     */
-    require(path) {
-        return this.asset_manager.require(path);
     }
 }

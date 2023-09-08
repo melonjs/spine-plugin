@@ -25,13 +25,13 @@ function spineParser(data, onload, onerror) {
     // load asset
     switch (ext) {
         case "atlas":
-            assetManager.loadTextureAtlas(filename, onload, onerror);
+            assetManager.asset_manager.loadTextureAtlas(filename, onload, onerror);
             break;
         case "json":
-            assetManager.loadText(filename, onload, onerror);
+            assetManager.asset_manager.loadText(filename, onload, onerror);
             break;
         case "skel":
-            assetManager.loadBinary(filename, onload, onerror);
+            assetManager.asset_manager.loadBinary(filename, onload, onerror);
             break;
         default:
             throw "Spine plugin: unknown extension when preloading spine assets";
@@ -71,6 +71,7 @@ export default class Spine extends Renderable {
     skeleton;
     animationState;
     skeletonRenderer;
+    assetManager;
     root;
     boneOffset;
     boneSize;
@@ -142,7 +143,7 @@ export default class Spine extends Renderable {
             this.runtime = spineCanvas;
         }
 
-        this.assetManager = assetManager;
+        this.assetManager = assetManager.asset_manager;
         this.skeletonRenderer = new SkeletonRenderer(this.runtime);
 
         // force anchorPoint to 0,0
@@ -201,10 +202,10 @@ export default class Spine extends Renderable {
      */
     setSkeleton(atlasFile, jsonFile) {
         // Create the texture atlas and skeleton data.
-        let atlas = assetManager.require(atlasFile);
+        let atlas = this.assetManager.require(atlasFile);
         let atlasLoader = new this.runtime.AtlasAttachmentLoader(atlas);
         let skeletonJson = new this.runtime.SkeletonJson(atlasLoader);
-        let skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonFile));
+        let skeletonData = skeletonJson.readSkeletonData(this.assetManager.require(jsonFile));
 
         // Instantiate a new skeleton based on the atlas and skeleton data.
         this.skeleton = new this.runtime.Skeleton(skeletonData);
