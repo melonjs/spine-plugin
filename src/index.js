@@ -1,65 +1,12 @@
-import { Math, Renderable, Vector2d, video, loader, utils, plugin } from "melonjs";
+import { Math, Renderable, Vector2d, video } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 import { Vector2 } from "@esotericsoftware/spine-core";
 
-import AssetManager from "./AssetManager.js";
+import { assetManager } from "./AssetManager.js";
 import SkeletonRenderer from "./SkeletonRenderer.js";
 
-import { name, version, dependencies, homepage, peerDependencies } from "../package.json";
-
-export let assetManager = new AssetManager();
-
-// a custom Spine parser for melonJS preloader
-function spineParser(data, onload, onerror) {
-
-    // decompose data.src for the spine loader
-    const ext = utils.file.getExtension(data.src);
-    const basename = utils.file.getBasename(data.src);
-    const path = utils.file.getPath(data.src);
-    const filename = basename + "." + ext;
-
-    // set url prefix
-    assetManager.setPrefix(path);
-
-    // load asset
-    switch (ext) {
-        case "atlas":
-            assetManager.asset_manager.loadTextureAtlas(filename, onload, onerror);
-            break;
-        case "json":
-            assetManager.asset_manager.loadText(filename, onload, onerror);
-            break;
-        case "skel":
-            assetManager.asset_manager.loadBinary(filename, onload, onerror);
-            break;
-        default:
-            throw "Spine plugin: unknown extension when preloading spine assets";
-    }
-
-    return 1;
-}
-
-/**
- * @classdesc
- * a Spine 4.x plugin implementation for melonJS
- * @augments plugin.BasePlugin
- */
-export class SpinePlugin extends plugin.BasePlugin {
-    constructor() {
-        // call the super constructor
-        super();
-
-        // minimum melonJS version expected to run this plugin
-        this.version = peerDependencies["melonjs"];
-
-        // hello world
-        console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
-
-        // set the spine custom parser
-        loader.setParser("spine", spineParser);
-    }
-}
+export { SpinePlugin } from "./SpinePlugin.js";
 
 /**
  * @classdesc
@@ -71,7 +18,6 @@ export default class Spine extends Renderable {
     skeleton;
     animationState;
     skeletonRenderer;
-    assetManager;
     root;
     boneOffset;
     boneSize;
@@ -143,7 +89,6 @@ export default class Spine extends Renderable {
             this.runtime = spineCanvas;
         }
 
-        this.assetManager = assetManager.asset_manager;
         this.skeletonRenderer = new SkeletonRenderer(this.runtime);
 
         // force anchorPoint to 0,0
@@ -202,10 +147,10 @@ export default class Spine extends Renderable {
      */
     setSkeleton(atlasFile, jsonFile) {
         // Create the texture atlas and skeleton data.
-        let atlas = this.assetManager.require(atlasFile);
+        let atlas = assetManager.require(atlasFile);
         let atlasLoader = new this.runtime.AtlasAttachmentLoader(atlas);
         let skeletonJson = new this.runtime.SkeletonJson(atlasLoader);
-        let skeletonData = skeletonJson.readSkeletonData(this.assetManager.require(jsonFile));
+        let skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonFile));
 
         // Instantiate a new skeleton based on the atlas and skeleton data.
         this.skeleton = new this.runtime.Skeleton(skeletonData);
