@@ -1,7 +1,14 @@
+/**
+ * @classdesc
+ * a Spine 4.x plugin implementation for melonJS
+ * @augments plugin.BasePlugin
+ */
+export class SpinePlugin extends plugin.BasePlugin {
+}
 export let assetManager: AssetManager;
 /**
  * @classdesc
- * An object to display a Spine animated skeleton on screen.
+ * An renderable object to render Spine animated skeleton.
  * @augments Renderable
  */
 declare class Spine extends Renderable {
@@ -402,10 +409,33 @@ declare class Spine extends Renderable {
     skeleton: any;
     animationState: any;
     skeletonRenderer: SkeletonRenderer;
-    assetManager: any;
     root: any;
     boneOffset: Vector2;
     boneSize: Vector2;
+    isSpineFlipped: {
+        x: boolean;
+        y: boolean;
+    };
+    /**
+     * Stores settings and other state for the playback of the current animation (if any).
+     * @type {TrackEntry}
+     * @see http://en.esotericsoftware.com/spine-api-reference#TrackEntry
+     * @see setAnimation
+     * @default undefined
+     * @example
+     * // set a default animation to "run"
+     * this.setAnimation(0, "run", true);
+     * ...
+     * ...
+     * // pause the animation
+     * this.currentTrack.timeScale = 0;
+     * ...
+     * ...
+     * // resume the animation
+     * this.currentTrack.timeScale = 1;
+     */
+    currentTrack: TrackEntry;
+    assetManager: AssetManager;
     mixTime: number;
     jsonFile: number | undefined;
     atlasFile: number | undefined;
@@ -435,7 +465,19 @@ declare class Spine extends Renderable {
      * me.game.world.addChild(spineAlien);
      */
     setSkeleton(atlasFile?: number | undefined, jsonFile?: number | undefined): void;
+    /**
+     * flip the Spine skeleton on the horizontal axis (around its center)
+     * @param {boolean} [flip=true] - `true` to flip this Spine object.
+     * @returns {Spine} Reference to this object for method chaining
+     */
+    flipX(flip?: boolean | undefined): Spine;
     isDirty: boolean | undefined;
+    /**
+     * flip the Spine skeleton on the vertical axis (around its center)
+     * @param {boolean} [flip=true] - `true` to flip this Spine object.
+     * @returns {Spine} Reference to this object for method chaining
+     */
+    flipY(flip?: boolean | undefined): Spine;
     /**
     * Rotate this Spine object by the specified angle (in radians).
     * @param {number} angle - The angle to rotate (in radians)
@@ -478,26 +520,37 @@ declare class Spine extends Renderable {
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
      * @param {number} [index] - the animation index
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
-     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      */
-    setAnimationByIndex(track_index?: number | undefined, index?: number | undefined, loop?: boolean | undefined): void;
+    setAnimationByIndex(track_index?: number | undefined, index?: number | undefined, loop?: boolean | undefined): TrackEntry;
     /**
      * Sets the current animation for a track, discarding any queued animations.
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
      * @param {string} [name] - the animation name
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
-     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      * @example
      * // set the current animation
      * spineAlien.setAnimation(0, "death", true);
      */
-    setAnimation(track_index?: number | undefined, name?: string | undefined, loop?: boolean | undefined): void;
+    setAnimation(track_index?: number | undefined, name?: string | undefined, loop?: boolean | undefined): TrackEntry;
+    /**
+     * return true if the given animation name is the current running animation for the current track.
+     * @name isCurrentAnimation
+     * @param {string} name - animation name
+     * @returns {boolean}
+     * @example
+     * if (!this.isCurrentAnimation("death")) {
+     *     // do something funny...
+     * }
+     */
+    isCurrentAnimation(name: string): boolean;
     /**
      * Adds an animation to be played after the current or last queued animation for a track, and sets the track entry's mixDuration.
      * @param {number} [delay=0] - If > 0, sets delay. If <= 0, the delay set is the duration of the previous track entry minus any mix duration plus the specified `delay` (ie the mix ends at (`delay` = 0) or before (`delay` < 0) the previous track entry duration). If the previous entry is looping, its next loop completion is used instead of its duration.
-     * @return A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
+     * @return {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
      */
-    addAnimationByIndex(track_index: any, index: any, loop?: boolean, delay?: number | undefined): void;
+    addAnimationByIndex(track_index: any, index: any, loop?: boolean, delay?: number | undefined): TrackEntry;
     addAnimationByName(track_index: any, animationName: any, loop?: boolean, delay?: number): void;
     getSpinePosition(): Vector2d;
     setSpineSize(width: any, height: any): void;
@@ -534,10 +587,11 @@ declare class Spine extends Renderable {
      */
     setSkinByName(skinName: string): void;
     /**
-     * Sets this slot to the setup pose.
+     * Reset this slot to the setup pose.
      */
     setToSetupPose(): void;
 }
+import { plugin } from 'melonjs';
 /**
  * @classdesc
  * An Asset Manager class to load spine assets
@@ -562,17 +616,37 @@ declare class AssetManager {
      * @param {string} atlas
      * @param {string} skel
      * @example
-     * // load spine assets
+     * // "manually" load spine assets
      * Spine.assetManager.setPrefix("data/spine/");
      * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
      * await Spine.assetManager.loadAll();
      */
     loadAsset(atlas: string, skel: string): void;
     /**
+     * load the given texture atlas
+     * @param {string} atlas
+     */
+    loadTextureAtlas(atlas: string, onload: any, onerror: any): any;
+    /**
+     * load the given skeleton .skel file
+     * @param {string} skel
+     */
+    loadBinary(skel: string, onload: any, onerror: any): any;
+    /**
+     * load the given skeleton binary file
+     * @param {string} skel
+     */
+    loadText(skel: string, onload: any, onerror: any): any;
+    /**
      * load all defined spine assets
      * @see loadAsset
      */
     loadAll(): any;
+    /**
+     * get the loaded skeleton data
+     * @param {string} path
+     */
+    require(path: string): any;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement

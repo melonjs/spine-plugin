@@ -1,11 +1,11 @@
 /*!
- * melonJS Spine plugin - v1.4.0
+ * melonJS Spine plugin - v1.5.0
  * http://www.melonjs.org
  * @melonjs/spine-plugin is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
  * @copyright (C) 2011 - 2023 AltByte Pte Ltd
  */
-import { event, video, Color as Color$1, Polygon, Math as Math$1, utils, loader, Renderable as Renderable$1, Vector2d } from 'melonjs';
+import { event, video, Color as Color$1, Polygon, Math as Math$1, utils, plugin, loader, Renderable as Renderable$1, Vector2d } from 'melonjs';
 
 /******************************************************************************
  * Spine Runtimes License Agreement
@@ -14951,21 +14951,46 @@ class AssetManager {
      * @param {string} atlas
      * @param {string} skel
      * @example
-     * // load spine assets
+     * // "manually" load spine assets
      * Spine.assetManager.setPrefix("data/spine/");
      * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
      * await Spine.assetManager.loadAll();
      */
     loadAsset(atlas, skel) {
         if (atlas) {
-            this.asset_manager.loadTextureAtlas(atlas);
+            this.loadTextureAtlas(atlas);
         }
 
         if (skel.endsWith(".skel")) {
-            this.asset_manager.loadBinary(skel);
+            this.loadBinary(skel);
         } else {
-            this.asset_manager.loadText(skel);
+            this.loadText(skel);
         }
+    }
+
+    /**
+     * load the given texture atlas
+     * @param {string} atlas
+     */
+    loadTextureAtlas(atlas, onload, onerror) {
+        return this.asset_manager.loadTextureAtlas(atlas, onload, onerror);
+    }
+
+
+    /**
+     * load the given skeleton .skel file
+     * @param {string} skel
+     */
+    loadBinary(skel, onload, onerror) {
+        return this.asset_manager.loadBinary(skel, onload, onerror);
+    }
+
+    /**
+     * load the given skeleton binary file
+     * @param {string} skel
+     */
+    loadText(skel, onload, onerror) {
+        return this.asset_manager.loadText(skel, onload, onerror);
     }
 
     /**
@@ -14974,6 +14999,14 @@ class AssetManager {
      */
     loadAll() {
         return this.asset_manager.loadAll();
+    }
+
+    /**
+     * get the loaded skeleton data
+     * @param {string} path
+     */
+    require(path) {
+        return this.asset_manager.require(path);
     }
 }
 
@@ -15196,7 +15229,7 @@ class SkeletonRenderer {
 }
 
 var name = "@melonjs/spine-plugin";
-var version = "1.4.0";
+var version = "1.5.0";
 var description = "melonJS Spine plugin";
 var homepage = "https://github.com/melonjs/spine-plugin#readme";
 var type = "module";
@@ -15245,9 +15278,9 @@ var peerDependencies = {
 	melonjs: "^15.10.0"
 };
 var dependencies = {
-	"@esotericsoftware/spine-canvas": "^4.2.19",
-	"@esotericsoftware/spine-core": "^4.2.19",
-	"@esotericsoftware/spine-webgl": "^4.2.19"
+	"@esotericsoftware/spine-canvas": "^4.2.21",
+	"@esotericsoftware/spine-core": "^4.2.21",
+	"@esotericsoftware/spine-webgl": "^4.2.21"
 };
 var devDependencies = {
 	"@babel/eslint-parser": "^7.22.15",
@@ -15259,7 +15292,7 @@ var devDependencies = {
 	"del-cli": "^5.1.0",
 	eslint: "^8.48.0",
 	"eslint-plugin-jsdoc": "^46.5.1",
-	rollup: "^3.28.1",
+	rollup: "^3.29.0",
 	"rollup-plugin-bundle-size": "^1.0.3",
 	typescript: "^5.2.2"
 };
@@ -15313,13 +15346,13 @@ function spineParser(data, onload, onerror) {
     // load asset
     switch (ext) {
         case "atlas":
-            assetManager.asset_manager.loadTextureAtlas(filename, onload, onerror);
+            assetManager.loadTextureAtlas(filename, onload, onerror);
             break;
         case "json":
-            assetManager.asset_manager.loadText(filename, onload, onerror);
+            assetManager.loadText(filename, onload, onerror);
             break;
         case "skel":
-            assetManager.asset_manager.loadBinary(filename, onload, onerror);
+            assetManager.loadBinary(filename, onload, onerror);
             break;
         default:
             throw "Spine plugin: unknown extension when preloading spine assets";
@@ -15328,17 +15361,30 @@ function spineParser(data, onload, onerror) {
     return 1;
 }
 
-// set the spine custom parser
-loader.setParser("spine", spineParser);
+/**
+ * @classdesc
+ * a Spine 4.x plugin implementation for melonJS
+ * @augments plugin.BasePlugin
+ */
+class SpinePlugin extends plugin.BasePlugin {
+    constructor() {
+        // call the super constructor
+        super();
 
-// hello world
-event.once(event.VIDEO_INIT, () => {
-    console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
-});
+        // minimum melonJS version expected to run this plugin
+        this.version = peerDependencies["melonjs"];
+
+        // hello world
+        console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
+
+        // set the spine custom parser
+        loader.setParser("spine", spineParser);
+    }
+}
 
 /**
  * @classdesc
- * An object to display a Spine animated skeleton on screen.
+ * An renderable object to render Spine animated skeleton.
  * @augments Renderable
  */
 class Spine extends Renderable$1 {
@@ -15346,10 +15392,33 @@ class Spine extends Renderable$1 {
     skeleton;
     animationState;
     skeletonRenderer;
-    assetManager;
     root;
     boneOffset;
     boneSize;
+    isSpineFlipped = {
+        x : false,
+        y : false
+    };
+
+    /**
+     * Stores settings and other state for the playback of the current animation (if any).
+     * @type {TrackEntry}
+     * @see http://en.esotericsoftware.com/spine-api-reference#TrackEntry
+     * @see setAnimation
+     * @default undefined
+     * @example
+     * // set a default animation to "run"
+     * this.setAnimation(0, "run", true);
+     * ...
+     * ...
+     * // pause the animation
+     * this.currentTrack.timeScale = 0;
+     * ...
+     * ...
+     * // resume the animation
+     * this.currentTrack.timeScale = 1;
+     */
+    currentTrack;
 
     /**
      * @param {number} x - the x coordinates of the Spine object
@@ -15394,7 +15463,7 @@ class Spine extends Renderable$1 {
             this.runtime = spineCanvas;
         }
 
-        this.assetManager = assetManager.asset_manager;
+        this.assetManager = assetManager;
         this.skeletonRenderer = new SkeletonRenderer(this.runtime);
 
         // force anchorPoint to 0,0
@@ -15453,15 +15522,15 @@ class Spine extends Renderable$1 {
      */
     setSkeleton(atlasFile, jsonFile) {
         // Create the texture atlas and skeleton data.
-        let atlas = this.assetManager.require(atlasFile);
+        let atlas = assetManager.require(atlasFile);
         let atlasLoader = new this.runtime.AtlasAttachmentLoader(atlas);
         let skeletonJson = new this.runtime.SkeletonJson(atlasLoader);
-        let skeletonData = skeletonJson.readSkeletonData(this.assetManager.require(jsonFile));
+        let skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonFile));
 
         // Instantiate a new skeleton based on the atlas and skeleton data.
         this.skeleton = new this.runtime.Skeleton(skeletonData);
-        this.skeleton.setToSetupPose();
-        this.skeleton.updateWorldTransform();
+
+        this.setToSetupPose();
 
         // Setup an animation state with a default mix of 0.2 seconds.
         var animationStateData = new this.runtime.AnimationStateData(this.skeleton.data);
@@ -15470,11 +15539,34 @@ class Spine extends Renderable$1 {
 
         // get a reference to the root bone
         this.root = this.skeleton.getRootBone();
-        // Spine uses Y-up, melonJS uses Y-down
-        this.root.scaleY *= -1;
+    }
 
-        // mark the object as dirty
-        this.isDirty = true;
+    /**
+     * flip the Spine skeleton on the horizontal axis (around its center)
+     * @param {boolean} [flip=true] - `true` to flip this Spine object.
+     * @returns {Spine} Reference to this object for method chaining
+     */
+    flipX(flip = true) {
+        if (this.isSpineFlipped.x !== flip) {
+            this.isSpineFlipped.x = flip;
+            this.root.scaleX *= -1;
+            this.isDirty = true;
+        }
+        return this;
+    }
+
+    /**
+     * flip the Spine skeleton on the vertical axis (around its center)
+     * @param {boolean} [flip=true] - `true` to flip this Spine object.
+     * @returns {Spine} Reference to this object for method chaining
+     */
+    flipY(flip = true) {
+        if (this.isSpineFlipped.y !== flip) {
+            this.isSpineFlipped.y = flip;
+            this.root.scaleY *= -1;
+            this.isDirty = true;
+        }
+        return this;
     }
 
      /**
@@ -15598,13 +15690,13 @@ class Spine extends Renderable$1 {
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
      * @param {number} [index] - the animation index
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
-     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      */
     setAnimationByIndex(track_index, index, loop = false) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
         } else {
-            this.animationState.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
+            return this.setAnimation(track_index, this.skeleton.data.animations[index].name, loop);
         }
     }
 
@@ -15613,25 +15705,40 @@ class Spine extends Renderable$1 {
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
      * @param {string} [name] - the animation name
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
-     * @returns A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
+     * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      * @example
      * // set the current animation
      * spineAlien.setAnimation(0, "death", true);
      */
     setAnimation(track_index, name, loop = false) {
-        this.animationState.setAnimation(track_index, name, loop);
+        this.currentTrack = this.animationState.setAnimation(track_index, name, loop);
+        return this.currentTrack;
+    }
+
+    /**
+     * return true if the given animation name is the current running animation for the current track.
+     * @name isCurrentAnimation
+     * @param {string} name - animation name
+     * @returns {boolean}
+     * @example
+     * if (!this.isCurrentAnimation("death")) {
+     *     // do something funny...
+     * }
+     */
+    isCurrentAnimation(name) {
+        return typeof this.currentTrack !== "undefined" && this.currentTrack.animation.name === name;
     }
 
     /**
      * Adds an animation to be played after the current or last queued animation for a track, and sets the track entry's mixDuration.
      * @param {number} [delay=0] - If > 0, sets delay. If <= 0, the delay set is the duration of the previous track entry minus any mix duration plus the specified `delay` (ie the mix ends at (`delay` = 0) or before (`delay` < 0) the previous track entry duration). If the previous entry is looping, its next loop completion is used instead of its duration.
-     * @return A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
+     * @return {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
      */
     addAnimationByIndex(track_index, index, loop = false, delay = 0) {
         if (index < 0 || index >= this.skeleton.data.animations.length) {
             return (console.log("Animation Index not found"));
         } else {
-            this.animationState.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
+            return this.addAnimation(track_index, this.skeleton.data.animations[index].name, loop, delay);
         }
     }
 
@@ -15691,11 +15798,21 @@ class Spine extends Renderable$1 {
     }
 
     /**
-     * Sets this slot to the setup pose.
+     * Reset this slot to the setup pose.
      */
     setToSetupPose() {
         this.skeleton.setToSetupPose();
+        // Spine uses Y-up, melonJS uses Y-down
+        this.skeleton.getRootBone().scaleY *= -1;
+        this.skeleton.updateWorldTransform();
+        // reset flip flags
+        this.isSpineFlipped.y = false;
+        this.isSpineFlipped.x = false;
+        // reset reference to current track entry
+        this.currentTrack = undefined;
+        // mark the object as dirty
+        this.isDirty = true;
     }
 }
 
-export { assetManager, Spine as default };
+export { SpinePlugin, assetManager, Spine as default };
