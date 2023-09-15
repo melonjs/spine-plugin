@@ -1,6 +1,6 @@
-import { loader, plugin } from "melonjs";
+import { plugin } from "melonjs";
 import { name, version, dependencies, homepage, peerDependencies } from "../package.json";
-import { spineParser } from "./SpineParser";
+import AssetManager from "./AssetManager";
 
 /**
  * @classdesc
@@ -18,7 +18,7 @@ export class SpinePlugin extends plugin.BasePlugin {
         // hello world
         console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
 
-        // set the spine custom parser
-        loader.setParser("spine", spineParser);
+        // instantiate the asset manager
+        this.assetManager = new AssetManager(this.app.renderer);
     }
 }

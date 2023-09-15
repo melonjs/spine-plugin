@@ -1,10 +1,10 @@
-import { Math, Renderable, Vector2d, video } from "melonjs";
+import { Math, Renderable, Vector2d, plugin } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 import { Vector2 } from "@esotericsoftware/spine-core";
 
-import { assetManager } from "./AssetManager.js";
 import SkeletonRenderer from "./SkeletonRenderer.js";
+import { SpinePlugin } from "./SpinePlugin.js";
 
 export { SpinePlugin } from "./SpinePlugin.js";
 
@@ -16,6 +16,8 @@ export { SpinePlugin } from "./SpinePlugin.js";
 export default class Spine extends Renderable {
     runtime;
     skeleton;
+    plugin;
+    renderer;
     animationState;
     skeletonRenderer;
     root;
@@ -83,7 +85,14 @@ export default class Spine extends Renderable {
     constructor(x, y, settings) {
         super(x, y, settings.width, settings.height);
 
-        if (video.renderer.WebGLVersion >= 1) {
+        // ensure plugin was properly registered
+        this.plugin = plugin.get(SpinePlugin);
+        if (typeof this.plugin === "undefined") {
+            throw "Spine plugin: plugin needs to be registered first using plugin.register";
+        }
+        this.renderer = this.plugin.app.renderer;
+
+        if (this.renderer.WebGLVersion >= 1) {
             this.runtime = spineWebGL;
         } else {
             this.runtime = spineCanvas;
@@ -147,10 +156,10 @@ export default class Spine extends Renderable {
      */
     setSkeleton(atlasFile, jsonFile) {
         // Create the texture atlas and skeleton data.
-        let atlas = assetManager.require(atlasFile);
+        let atlas = this.plugin.assetManager.require(atlasFile);
         let atlasLoader = new this.runtime.AtlasAttachmentLoader(atlas);
         let skeletonJson = new this.runtime.SkeletonJson(atlasLoader);
-        let skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonFile));
+        let skeletonData = skeletonJson.readSkeletonData(this.plugin.assetManager.require(jsonFile));
 
         // Instantiate a new skeleton based on the atlas and skeleton data.
         this.skeleton = new this.runtime.Skeleton(skeletonData);

@@ -1,4 +1,4 @@
-import { event } from "melonjs";
+import { utils, loader } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
 
@@ -11,18 +11,46 @@ export default class AssetManager {
     pathPrefix;
 
     /**
+     * @param {CanvasRenderer|WebGLRenderer} renderer - a melonJS renderer instance
      * @param {string} [pathPrefix=""] - a default path prefix for assets location
      */
-    constructor(pathPrefix = "") {
-        event.once(event.VIDEO_INIT, (renderer) => {
-            this.pathPrefix = pathPrefix;
-            if (renderer.WebGLVersion >= 1) {
-                this.asset_manager = new spineWebGL.AssetManager(renderer.getContext(), this.pathPrefix);
-            } else {
-                // canvas renderer
-                this.asset_manager = new spineCanvas.AssetManager(this.pathPrefix);
+    constructor(renderer, pathPrefix = "") {
+        this.pathPrefix = pathPrefix;
+        if (renderer.WebGLVersion >= 1) {
+            this.asset_manager = new spineWebGL.AssetManager(renderer.getContext(), this.pathPrefix);
+        } else {
+            // canvas renderer
+            this.asset_manager = new spineCanvas.AssetManager(this.pathPrefix);
+        }
+
+        // set the spine custom parser
+        loader.setParser("spine", (data, onload, onerror) => {
+            // decompose data.src for the spine loader
+            const ext = utils.file.getExtension(data.src);
+            const basename = utils.file.getBasename(data.src);
+            const path = utils.file.getPath(data.src);
+            const filename = basename + "." + ext;
+
+            this.setPrefix(path);
+
+            // load asset
+            switch (ext) {
+                case "atlas":
+                    this.loadTextureAtlas(filename, onload, onerror);
+                    break;
+                case "json":
+                    this.loadText(filename, onload, onerror);
+                    break;
+                case "skel":
+                    this.loadBinary(filename, onload, onerror);
+                    break;
+                default:
+                    throw "Spine plugin: unknown extension when preloading spine assets";
             }
+
+            return 1;
         });
+
     }
 
     /**
@@ -99,5 +127,3 @@ export default class AssetManager {
         return this.asset_manager.require(path);
     }
 }
-
-export let assetManager = new AssetManager();
