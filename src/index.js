@@ -8,6 +8,9 @@ import { SpinePlugin } from "./SpinePlugin.js";
 
 export { SpinePlugin } from "./SpinePlugin.js";
 
+// a temporary array used for skeleton.getBounds();
+let tempArray = [];
+
 /**
  * @classdesc
  * An renderable object to render Spine animated skeleton.
@@ -249,13 +252,16 @@ export default class Spine extends Renderable {
                 let boneOffset = this.boneOffset;
                 let boneSize = this.boneSize;
 
-                this.skeleton.getBounds(boneOffset, boneSize);
+                this.skeleton.getBounds(boneOffset, boneSize, tempArray);
+
+                let minX = boneOffset.x - rootBone.x,
+                    minY = boneOffset.y - rootBone.y;
 
                 bounds.addFrame(
-                    boneOffset.x - rootBone.x,
-                    boneOffset.y - rootBone.y,
-                    boneSize.x + boneOffset.x - rootBone.x,
-                    boneSize.y + boneOffset.y  - rootBone.y,
+                    minX,
+                    minY,
+                    minX + boneSize.x,
+                    minY + boneSize.y,
                     !isIdentity ? this.currentTransform : undefined
                 );
             } else {
@@ -270,6 +276,7 @@ export default class Spine extends Renderable {
 
             if (absolute === true) {
                 var absPos = this.getAbsolutePosition();
+                //bounds.translate(absPos.x, absPos.y);
                 bounds.centerOn(absPos.x + bounds.centerX,  absPos.y + bounds.centerY);
             }
             return bounds;
@@ -289,22 +296,24 @@ export default class Spine extends Renderable {
     update(dt) {
         if (typeof this.skeleton !== "undefined") {
             let rootBone = this.skeleton.getRootBone();
-
-            // update the root bone position
-            if (rootBone.x !== this.pos.x) {
-                rootBone.x = this.pos.x;
-            }
-            if (rootBone.y !== this.pos.y) {
-                rootBone.y = this.pos.y;
-            }
+            //let height = this.renderer.getHeight();
 
             // Update and apply the animation state, update the skeleton's
-            // world transforms and render the skeleton.
             this.animationState.update(dt / 1000);
             this.animationState.apply(this.skeleton);
+
+            // update the root bone position
+            rootBone.x = this.pos.x;
+            rootBone.y = this.pos.y;
+
+            // world transforms
             this.skeleton.updateWorldTransform();
 
+            // update Bounds
             this.updateBounds();
+
+            // world transforms
+            //this.skeleton.updateWorldTransform();
         }
         return true;
     }
