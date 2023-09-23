@@ -5,7 +5,7 @@
  * http://www.opensource.org/licenses/mit-license
  * @copyright (C) 2011 - 2023 AltByte Pte Ltd
  */
-import { event, video, Color as Color$1, Polygon, Math as Math$1, utils, plugin, loader, Renderable as Renderable$1, Vector2d } from 'melonjs';
+import { Color as Color$1, Polygon, Math as Math$1, loader, utils, plugin, Renderable as Renderable$1, Vector2d } from 'melonjs';
 
 /******************************************************************************
  * Spine Runtimes License Agreement
@@ -11276,59 +11276,6 @@ class ManagedWebGLRenderingContext {
             this.restorables.splice(index, 1);
     }
 }
-const ONE = 1;
-const ONE_MINUS_SRC_COLOR = 0x0301;
-const SRC_ALPHA = 0x0302;
-const ONE_MINUS_SRC_ALPHA = 0x0303;
-const ONE_MINUS_DST_ALPHA = 0x0305;
-const DST_COLOR = 0x0306;
-class WebGLBlendModeConverter {
-    static getDestGLBlendMode(blendMode) {
-        switch (blendMode) {
-            case BlendMode.Normal: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Additive: return ONE;
-            case BlendMode.Multiply: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Screen: return ONE_MINUS_SRC_ALPHA;
-            default: throw new Error("Unknown blend mode: " + blendMode);
-        }
-    }
-    static getDestColorGLBlendMode(blendMode) {
-        switch (blendMode) {
-            case BlendMode.Normal: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Additive: return ONE;
-            case BlendMode.Multiply: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Screen: return ONE_MINUS_SRC_COLOR;
-            default: throw new Error("Unknown blend mode: " + blendMode);
-        }
-    }
-    static getDestAlphaGLBlendMode(blendMode, premultipliedAlpha = false) {
-        switch (blendMode) {
-            case BlendMode.Normal: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Additive: return premultipliedAlpha ? ONE_MINUS_SRC_ALPHA : ONE;
-            case BlendMode.Multiply: return ONE_MINUS_SRC_ALPHA;
-            case BlendMode.Screen: return ONE_MINUS_SRC_ALPHA;
-            default: throw new Error("Unknown blend mode: " + blendMode);
-        }
-    }
-    static getSourceColorGLBlendMode(blendMode, premultipliedAlpha = false) {
-        switch (blendMode) {
-            case BlendMode.Normal: return premultipliedAlpha ? ONE : SRC_ALPHA;
-            case BlendMode.Additive: return premultipliedAlpha ? ONE : SRC_ALPHA;
-            case BlendMode.Multiply: return DST_COLOR;
-            case BlendMode.Screen: return premultipliedAlpha ? ONE : SRC_ALPHA;
-            default: throw new Error("Unknown blend mode: " + blendMode);
-        }
-    }
-    static getSourceAlphaGLBlendMode(blendMode, premultipliedAlpha = false) {
-        switch (blendMode) {
-            case BlendMode.Normal: return premultipliedAlpha ? SRC_ALPHA : ONE;
-            case BlendMode.Additive: return premultipliedAlpha ? SRC_ALPHA : ONE;
-            case BlendMode.Multiply: return ONE;
-            case BlendMode.Screen: return ONE;
-            default: throw new Error("Unknown blend mode: " + blendMode);
-        }
-    }
-}
 
 /******************************************************************************
  * Spine Runtimes License Agreement
@@ -12778,6 +12725,12 @@ var VertexAttributeType;
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
  * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
+const GL_ONE = 1;
+const GL_ONE_MINUS_SRC_COLOR = 0x0301;
+const GL_SRC_ALPHA = 0x0302;
+const GL_ONE_MINUS_SRC_ALPHA = 0x0303;
+const GL_ONE_MINUS_DST_ALPHA = 0x0305;
+const GL_DST_COLOR = 0x0306;
 class PolygonBatcher {
     constructor(context, twoColorTint = true, maxVertices = 10920) {
         this.drawCalls = 0;
@@ -12797,8 +12750,7 @@ class PolygonBatcher {
         let gl = this.context.gl;
         this.srcColorBlend = gl.SRC_ALPHA;
         this.srcAlphaBlend = gl.ONE;
-        this.dstColorBlend = gl.ONE_MINUS_SRC_ALPHA;
-        this.dstAlphaBlend = gl.ONE_MINUS_SRC_ALPHA;
+        this.dstBlend = gl.ONE_MINUS_SRC_ALPHA;
     }
     begin(shader) {
         if (this.isDrawing)
@@ -12809,25 +12761,28 @@ class PolygonBatcher {
         this.isDrawing = true;
         let gl = this.context.gl;
         gl.enable(gl.BLEND);
-        gl.blendFuncSeparate(this.srcColorBlend, this.dstColorBlend, this.srcAlphaBlend, this.dstAlphaBlend);
+        gl.blendFuncSeparate(this.srcColorBlend, this.dstBlend, this.srcAlphaBlend, this.dstBlend);
         if (PolygonBatcher.disableCulling) {
             this.cullWasEnabled = gl.isEnabled(gl.CULL_FACE);
             if (this.cullWasEnabled)
                 gl.disable(gl.CULL_FACE);
         }
     }
-    setBlendMode(srcColorBlend, srcAlphaBlend, dstColorBlend, dstAlphaBlend) {
-        if (this.srcColorBlend == srcColorBlend && this.srcAlphaBlend == srcAlphaBlend && this.dstColorBlend == dstColorBlend && this.dstAlphaBlend == dstAlphaBlend)
+    setBlendMode(blendMode, premultipliedAlpha) {
+        const blendModeGL = PolygonBatcher.blendModesGL[blendMode];
+        const srcColorBlend = premultipliedAlpha ? blendModeGL.srcRgbPma : blendModeGL.srcRgb;
+        const srcAlphaBlend = blendModeGL.srcAlpha;
+        const dstBlend = blendModeGL.dstRgb;
+        if (this.srcColorBlend == srcColorBlend && this.srcAlphaBlend == srcAlphaBlend && this.dstBlend == dstBlend)
             return;
         this.srcColorBlend = srcColorBlend;
         this.srcAlphaBlend = srcAlphaBlend;
-        this.dstColorBlend = dstColorBlend;
-        this.dstAlphaBlend = dstAlphaBlend;
+        this.dstBlend = dstBlend;
         if (this.isDrawing) {
             this.flush();
-            let gl = this.context.gl;
-            gl.blendFuncSeparate(srcColorBlend, dstColorBlend, srcAlphaBlend, dstAlphaBlend);
         }
+        let gl = this.context.gl;
+        gl.blendFuncSeparate(srcColorBlend, dstBlend, srcAlphaBlend, dstBlend);
     }
     draw(texture, vertices, indices) {
         if (texture != this.lastTexture) {
@@ -12893,6 +12848,12 @@ class PolygonBatcher {
 }
 PolygonBatcher.disableCulling = false;
 PolygonBatcher.globalDrawCalls = 0;
+PolygonBatcher.blendModesGL = [
+    { srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
+    { srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE, srcAlpha: GL_ONE },
+    { srcRgb: GL_DST_COLOR, srcRgbPma: GL_DST_COLOR, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
+    { srcRgb: GL_ONE, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_COLOR, srcAlpha: GL_ONE }
+];
 
 /******************************************************************************
  * Spine Runtimes License Agreement
@@ -12937,8 +12898,7 @@ class ShapeRenderer {
         let gl = this.context.gl;
         this.srcColorBlend = gl.SRC_ALPHA;
         this.srcAlphaBlend = gl.ONE;
-        this.dstColorBlend = gl.ONE_MINUS_SRC_ALPHA;
-        this.dstAlphaBlend = gl.ONE_MINUS_SRC_ALPHA;
+        this.dstBlend = gl.ONE_MINUS_SRC_ALPHA;
     }
     begin(shader) {
         if (this.isDrawing)
@@ -12948,17 +12908,16 @@ class ShapeRenderer {
         this.isDrawing = true;
         let gl = this.context.gl;
         gl.enable(gl.BLEND);
-        gl.blendFuncSeparate(this.srcColorBlend, this.dstColorBlend, this.srcAlphaBlend, this.dstAlphaBlend);
+        gl.blendFuncSeparate(this.srcColorBlend, this.dstBlend, this.srcAlphaBlend, this.dstBlend);
     }
-    setBlendMode(srcColorBlend, srcAlphaBlend, dstColorBlend, dstAlphaBlend) {
+    setBlendMode(srcColorBlend, srcAlphaBlend, dstBlend) {
         this.srcColorBlend = srcColorBlend;
         this.srcAlphaBlend = srcAlphaBlend;
-        this.dstColorBlend = dstColorBlend;
-        this.dstAlphaBlend = dstAlphaBlend;
+        this.dstBlend = dstBlend;
         if (this.isDrawing) {
             this.flush();
             let gl = this.context.gl;
-            gl.blendFuncSeparate(srcColorBlend, dstColorBlend, srcAlphaBlend, dstAlphaBlend);
+            gl.blendFuncSeparate(srcColorBlend, dstBlend, srcAlphaBlend, dstBlend);
         }
     }
     setColor(color) {
@@ -13293,7 +13252,7 @@ class SkeletonDebugRenderer {
         let skeletonY = skeleton.y;
         let gl = this.context.gl;
         let srcFunc = this.premultipliedAlpha ? gl.ONE : gl.SRC_ALPHA;
-        shapes.setBlendMode(srcFunc, gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        shapes.setBlendMode(srcFunc, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         let bones = skeleton.bones;
         if (this.drawBones) {
             shapes.setColor(this.boneLineColor);
@@ -13515,10 +13474,6 @@ let SkeletonRenderer$2 = class SkeletonRenderer {
         let premultipliedAlpha = this.premultipliedAlpha;
         let twoColorTint = this.twoColorTint;
         let blendMode = null;
-        let tempPos = this.temp;
-        let tempUv = this.temp2;
-        let tempLight = this.temp3;
-        let tempDark = this.temp4;
         let renderable = this.renderable;
         let uvs;
         let triangles;
@@ -13611,7 +13566,7 @@ let SkeletonRenderer$2 = class SkeletonRenderer {
                 let slotBlendMode = slot.data.blendMode;
                 if (slotBlendMode != blendMode) {
                     blendMode = slotBlendMode;
-                    batcher.setBlendMode(WebGLBlendModeConverter.getSourceColorGLBlendMode(blendMode, premultipliedAlpha), WebGLBlendModeConverter.getSourceAlphaGLBlendMode(blendMode, premultipliedAlpha), WebGLBlendModeConverter.getDestColorGLBlendMode(blendMode), WebGLBlendModeConverter.getDestAlphaGLBlendMode(blendMode, premultipliedAlpha));
+                    batcher.setBlendMode(blendMode, premultipliedAlpha);
                 }
                 if (clipper.isClipping()) {
                     clipper.clipTriangles(renderable.vertices, renderable.numFloats, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint);
@@ -14207,7 +14162,7 @@ class LoadingScreen {
         let gl = renderer.context.gl;
         renderer.resize(ResizeMode.Expand);
         renderer.camera.position.set(canvas.width / 2, canvas.height / 2, 0);
-        renderer.batcher.setBlendMode(gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        renderer.batcher.setBlendMode(BlendMode.Normal, true);
         if (complete) {
             this.fadeOut += this.timeKeeper.delta * (this.timeKeeper.totalTime < 1 ? 2 : 1);
             if (this.fadeOut > FADE_OUT)
@@ -14281,8 +14236,10 @@ let SPINE_LOGO_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKUAAABsCAY
 class SpineCanvas {
     /** Constructs a new spine canvas, rendering to the provided HTML canvas. */
     constructor(canvas, config) {
+        this.config = config;
         /** Tracks the current time, delta, and other time related statistics. */
         this.time = new TimeKeeper();
+        this.disposed = false;
         if (!config.pathPrefix)
             config.pathPrefix = "";
         if (!config.app)
@@ -14292,6 +14249,7 @@ class SpineCanvas {
                 update: () => { },
                 render: () => { },
                 error: () => { },
+                dispose: () => { },
             };
         if (!config.webglConfig)
             config.webglConfig = { alpha: true };
@@ -14304,6 +14262,8 @@ class SpineCanvas {
         if (config.app.loadAssets)
             config.app.loadAssets(this);
         let loop = () => {
+            if (this.disposed)
+                return;
             requestAnimationFrame(loop);
             this.time.update();
             if (config.app.update)
@@ -14312,6 +14272,8 @@ class SpineCanvas {
                 config.app.render(this);
         };
         let waitForAssets = () => {
+            if (this.disposed)
+                return;
             if (this.assetManager.isLoadingComplete()) {
                 if (this.assetManager.hasErrors()) {
                     if (config.app.error)
@@ -14332,6 +14294,12 @@ class SpineCanvas {
     clear(r, g, b, a) {
         this.gl.clearColor(r, g, b, a);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    }
+    /** Disposes the app, so the update() and render() functions are no longer called. Calls the dispose() callback.*/
+    dispose() {
+        if (this.config.app.dispose)
+            this.config.app.dispose(this);
+        this.disposed = true;
     }
 }
 
@@ -14484,7 +14452,6 @@ var spineWebGL = {
     VertexAttachment: VertexAttachment,
     VertexAttribute: VertexAttribute,
     get VertexAttributeType () { return VertexAttributeType; },
-    WebGLBlendModeConverter: WebGLBlendModeConverter,
     WindowedMean: WindowedMean
 };
 
@@ -14912,104 +14879,6 @@ var spineCanvas = {
     WindowedMean: WindowedMean
 };
 
-/**
- * @classdesc
- * An Asset Manager class to load spine assets
- */
-class AssetManager {
-    asset_manager;
-    pathPrefix;
-
-    /**
-     * @param {string} [pathPrefix=""] - a default path prefix for assets location
-     */
-    constructor(pathPrefix = "") {
-        event.once(event.VIDEO_INIT, () => {
-            this.pathPrefix = pathPrefix;
-            if (video.renderer.WebGLVersion >= 1) {
-                this.asset_manager = new AssetManager$2(video.renderer.getContext(), this.pathPrefix);
-            } else {
-                // canvas renderer
-                this.asset_manager = new AssetManager$1(this.pathPrefix);
-            }
-        });
-    }
-
-    /**
-     * set a default path prefix for assets location
-     * @see loadAsset
-     * @param {string} pathPrefix
-     */
-    setPrefix(pathPrefix) {
-        this.asset_manager.pathPrefix =  this.pathPrefix = pathPrefix;
-    }
-
-    /**
-     * define all spine assets to be loaded
-     * @see setPrefix
-     * @see loadAll
-     * @param {string} atlas
-     * @param {string} skel
-     * @example
-     * // "manually" load spine assets
-     * Spine.assetManager.setPrefix("data/spine/");
-     * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
-     * await Spine.assetManager.loadAll();
-     */
-    loadAsset(atlas, skel) {
-        if (atlas) {
-            this.loadTextureAtlas(atlas);
-        }
-
-        if (skel.endsWith(".skel")) {
-            this.loadBinary(skel);
-        } else {
-            this.loadText(skel);
-        }
-    }
-
-    /**
-     * load the given texture atlas
-     * @param {string} atlas
-     */
-    loadTextureAtlas(atlas, onload, onerror) {
-        return this.asset_manager.loadTextureAtlas(atlas, onload, onerror);
-    }
-
-
-    /**
-     * load the given skeleton .skel file
-     * @param {string} skel
-     */
-    loadBinary(skel, onload, onerror) {
-        return this.asset_manager.loadBinary(skel, onload, onerror);
-    }
-
-    /**
-     * load the given skeleton binary file
-     * @param {string} skel
-     */
-    loadText(skel, onload, onerror) {
-        return this.asset_manager.loadText(skel, onload, onerror);
-    }
-
-    /**
-     * load all defined spine assets
-     * @see loadAsset
-     */
-    loadAll() {
-        return this.asset_manager.loadAll();
-    }
-
-    /**
-     * get the loaded skeleton data
-     * @param {string} path
-     */
-    require(path) {
-        return this.asset_manager.require(path);
-    }
-}
-
 const vertexSize = 2 + 2 + 4;
 const blendModeLUT = ["normal", "additive", "multiply", "screen"];
 const regionDebugColor = "green";
@@ -15275,12 +15144,12 @@ var files = [
 	"CHANGELOG.md"
 ];
 var peerDependencies = {
-	melonjs: "^15.10.0"
+	melonjs: "^15.12.0"
 };
 var dependencies = {
-	"@esotericsoftware/spine-canvas": "^4.2.21",
-	"@esotericsoftware/spine-core": "^4.2.21",
-	"@esotericsoftware/spine-webgl": "^4.2.21"
+	"@esotericsoftware/spine-canvas": "^4.2.23",
+	"@esotericsoftware/spine-core": "^4.2.23",
+	"@esotericsoftware/spine-webgl": "^4.2.23"
 };
 var devDependencies = {
 	"@babel/eslint-parser": "^7.22.15",
@@ -15290,9 +15159,9 @@ var devDependencies = {
 	"@rollup/plugin-node-resolve": "^15.2.1",
 	"@rollup/plugin-replace": "^5.0.2",
 	"del-cli": "^5.1.0",
-	eslint: "^8.48.0",
-	"eslint-plugin-jsdoc": "^46.5.1",
-	rollup: "^3.29.0",
+	eslint: "^8.50.0",
+	"eslint-plugin-jsdoc": "^46.8.2",
+	rollup: "^3.29.2",
 	"rollup-plugin-bundle-size": "^1.0.3",
 	typescript: "^5.2.2"
 };
@@ -15329,36 +15198,130 @@ var _package = {
 	scripts: scripts
 };
 
-let assetManager = new AssetManager();
+/**
+ * @classdesc
+ * An Asset Manager class to load spine assets
+ */
+class AssetManager {
+    asset_manager;
+    pathPrefix;
 
-// a custom Spine parser for melonJS preloader
-function spineParser(data, onload, onerror) {
+    /**
+     * @param {CanvasRenderer|WebGLRenderer} renderer - a melonJS renderer instance
+     * @param {string} [pathPrefix=""] - a default path prefix for assets location
+     */
+    constructor(renderer, pathPrefix = "") {
+        this.pathPrefix = pathPrefix;
+        if (renderer.WebGLVersion >= 1) {
+            this.asset_manager = new AssetManager$2(renderer.getContext(), this.pathPrefix);
+        } else {
+            // canvas renderer
+            this.asset_manager = new AssetManager$1(this.pathPrefix);
+        }
 
-    // decompose data.src for the spine loader
-    const ext = utils.file.getExtension(data.src);
-    const basename = utils.file.getBasename(data.src);
-    const path = utils.file.getPath(data.src);
-    const filename = basename + "." + ext;
+        // set the spine custom parser
+        loader.setParser("spine", (data, onload, onerror) => {
+            // decompose data.src for the spine loader
+            const ext = utils.file.getExtension(data.src);
+            const basename = utils.file.getBasename(data.src);
+            const path = utils.file.getPath(data.src);
+            const filename = basename + "." + ext;
 
-    // set url prefix
-    assetManager.setPrefix(path);
+            this.setPrefix(path);
 
-    // load asset
-    switch (ext) {
-        case "atlas":
-            assetManager.loadTextureAtlas(filename, onload, onerror);
-            break;
-        case "json":
-            assetManager.loadText(filename, onload, onerror);
-            break;
-        case "skel":
-            assetManager.loadBinary(filename, onload, onerror);
-            break;
-        default:
-            throw "Spine plugin: unknown extension when preloading spine assets";
+            // load asset
+            switch (ext) {
+                case "atlas":
+                    this.loadTextureAtlas(filename, onload, onerror);
+                    break;
+                case "json":
+                    this.loadText(filename, onload, onerror);
+                    break;
+                case "skel":
+                    this.loadBinary(filename, onload, onerror);
+                    break;
+                default:
+                    throw "Spine plugin: unknown extension when preloading spine assets";
+            }
+
+            return 1;
+        });
+
     }
 
-    return 1;
+    /**
+     * set a default path prefix for assets location
+     * @see loadAsset
+     * @param {string} pathPrefix
+     */
+    setPrefix(pathPrefix) {
+        this.asset_manager.pathPrefix =  this.pathPrefix = pathPrefix;
+    }
+
+    /**
+     * define all spine assets to be loaded
+     * @see setPrefix
+     * @see loadAll
+     * @param {string} atlas
+     * @param {string} skel
+     * @example
+     * // "manually" load spine assets
+     * Spine.assetManager.setPrefix("data/spine/");
+     * Spine.assetManager.loadAsset("alien.atlas", "alien-ess.json");
+     * await Spine.assetManager.loadAll();
+     */
+    loadAsset(atlas, skel) {
+        if (atlas) {
+            this.loadTextureAtlas(atlas);
+        }
+
+        if (skel.endsWith(".skel")) {
+            this.loadBinary(skel);
+        } else {
+            this.loadText(skel);
+        }
+    }
+
+    /**
+     * load the given texture atlas
+     * @param {string} atlas
+     */
+    loadTextureAtlas(atlas, onload, onerror) {
+        return this.asset_manager.loadTextureAtlas(atlas, onload, onerror);
+    }
+
+
+    /**
+     * load the given skeleton .skel file
+     * @param {string} skel
+     */
+    loadBinary(skel, onload, onerror) {
+        return this.asset_manager.loadBinary(skel, onload, onerror);
+    }
+
+    /**
+     * load the given skeleton binary file
+     * @param {string} skel
+     */
+    loadText(skel, onload, onerror) {
+        return this.asset_manager.loadText(skel, onload, onerror);
+    }
+
+    /**
+     * load all defined spine assets
+     * @see loadAsset
+     */
+    loadAll() {
+        return this.asset_manager.loadAll();
+    }
+
+    /**
+     * get the loaded skeleton data
+     * @param {string} path
+     */
+    require(path) {
+        return this.asset_manager.require(path);
+    }
 }
 
 /**
@@ -15377,10 +15340,13 @@ class SpinePlugin extends plugin.BasePlugin {
         // hello world
         console.log(`${name} ${version} - spine runtime ${dependencies["@esotericsoftware/spine-core"]} | ${homepage}`);
 
-        // set the spine custom parser
-        loader.setParser("spine", spineParser);
+        // instantiate the asset manager
+        this.assetManager = new AssetManager(this.app.renderer);
     }
 }
+
+// a temporary array used for skeleton.getBounds();
+let tempArray = [];
 
 /**
  * @classdesc
@@ -15390,6 +15356,8 @@ class SpinePlugin extends plugin.BasePlugin {
 class Spine extends Renderable$1 {
     runtime;
     skeleton;
+    plugin;
+    renderer;
     animationState;
     skeletonRenderer;
     root;
@@ -15457,13 +15425,19 @@ class Spine extends Renderable$1 {
     constructor(x, y, settings) {
         super(x, y, settings.width, settings.height);
 
-        if (video.renderer.WebGLVersion >= 1) {
+        // ensure plugin was properly registered
+        this.plugin = plugin.get(SpinePlugin);
+        if (typeof this.plugin === "undefined") {
+            throw "Spine plugin: plugin needs to be registered first using plugin.register";
+        }
+        this.renderer = this.plugin.app.renderer;
+
+        if (this.renderer.WebGLVersion >= 1) {
             this.runtime = spineWebGL;
         } else {
             this.runtime = spineCanvas;
         }
 
-        this.assetManager = assetManager;
         this.skeletonRenderer = new SkeletonRenderer(this.runtime);
 
         // force anchorPoint to 0,0
@@ -15522,10 +15496,10 @@ class Spine extends Renderable$1 {
      */
     setSkeleton(atlasFile, jsonFile) {
         // Create the texture atlas and skeleton data.
-        let atlas = assetManager.require(atlasFile);
+        let atlas = this.plugin.assetManager.require(atlasFile);
         let atlasLoader = new this.runtime.AtlasAttachmentLoader(atlas);
         let skeletonJson = new this.runtime.SkeletonJson(atlasLoader);
-        let skeletonData = skeletonJson.readSkeletonData(assetManager.require(jsonFile));
+        let skeletonData = skeletonJson.readSkeletonData(this.plugin.assetManager.require(jsonFile));
 
         // Instantiate a new skeleton based on the atlas and skeleton data.
         this.skeleton = new this.runtime.Skeleton(skeletonData);
@@ -15615,13 +15589,16 @@ class Spine extends Renderable$1 {
                 let boneOffset = this.boneOffset;
                 let boneSize = this.boneSize;
 
-                this.skeleton.getBounds(boneOffset, boneSize);
+                this.skeleton.getBounds(boneOffset, boneSize, tempArray);
+
+                let minX = boneOffset.x - rootBone.x,
+                    minY = boneOffset.y - rootBone.y;
 
                 bounds.addFrame(
-                    boneOffset.x - rootBone.x,
-                    boneOffset.y - rootBone.y,
-                    boneSize.x + boneOffset.x - rootBone.x,
-                    boneSize.y + boneOffset.y  - rootBone.y,
+                    minX,
+                    minY,
+                    minX + boneSize.x,
+                    minY + boneSize.y,
                     !isIdentity ? this.currentTransform : undefined
                 );
             } else {
@@ -15636,6 +15613,7 @@ class Spine extends Renderable$1 {
 
             if (absolute === true) {
                 var absPos = this.getAbsolutePosition();
+                //bounds.translate(absPos.x, absPos.y);
                 bounds.centerOn(absPos.x + bounds.centerX,  absPos.y + bounds.centerY);
             }
             return bounds;
@@ -15655,22 +15633,24 @@ class Spine extends Renderable$1 {
     update(dt) {
         if (typeof this.skeleton !== "undefined") {
             let rootBone = this.skeleton.getRootBone();
-
-            // update the root bone position
-            if (rootBone.x !== this.pos.x) {
-                rootBone.x = this.pos.x;
-            }
-            if (rootBone.y !== this.pos.y) {
-                rootBone.y = this.pos.y;
-            }
+            //let height = this.renderer.getHeight();
 
             // Update and apply the animation state, update the skeleton's
-            // world transforms and render the skeleton.
             this.animationState.update(dt / 1000);
             this.animationState.apply(this.skeleton);
+
+            // update the root bone position
+            rootBone.x = this.pos.x;
+            rootBone.y = this.pos.y;
+
+            // world transforms
             this.skeleton.updateWorldTransform();
 
+            // update Bounds
             this.updateBounds();
+
+            // world transforms
+            //this.skeleton.updateWorldTransform();
         }
         return true;
     }
@@ -15815,4 +15795,4 @@ class Spine extends Renderable$1 {
     }
 }
 
-export { SpinePlugin, assetManager, Spine as default };
+export { SpinePlugin, Spine as default };

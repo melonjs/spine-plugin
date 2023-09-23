@@ -4,8 +4,9 @@
  * @augments plugin.BasePlugin
  */
 export class SpinePlugin extends plugin.BasePlugin {
+    constructor();
+    assetManager: AssetManager;
 }
-export let assetManager: AssetManager;
 /**
  * @classdesc
  * An renderable object to render Spine animated skeleton.
@@ -247,7 +248,6 @@ declare class Spine extends Renderable {
         VertexAttachment: typeof VertexAttachment;
         VertexAttribute: typeof VertexAttribute;
         readonly VertexAttributeType: any;
-        WebGLBlendModeConverter: typeof WebGLBlendModeConverter;
         WindowedMean: typeof WindowedMean;
     } | {
         __proto__: null;
@@ -407,6 +407,8 @@ declare class Spine extends Renderable {
         WindowedMean: typeof WindowedMean;
     };
     skeleton: any;
+    plugin: plugin.BasePlugin;
+    renderer: any;
     animationState: any;
     skeletonRenderer: SkeletonRenderer;
     root: any;
@@ -435,7 +437,6 @@ declare class Spine extends Renderable {
      * this.currentTrack.timeScale = 1;
      */
     currentTrack: TrackEntry;
-    assetManager: AssetManager;
     mixTime: number;
     jsonFile: number | undefined;
     atlasFile: number | undefined;
@@ -598,11 +599,68 @@ import { plugin } from 'melonjs';
  */
 declare class AssetManager {
     /**
+     * @param {CanvasRenderer|WebGLRenderer} renderer - a melonJS renderer instance
      * @param {string} [pathPrefix=""] - a default path prefix for assets location
      */
-    constructor(pathPrefix?: string | undefined);
-    asset_manager: any;
-    pathPrefix: any;
+    constructor(renderer: CanvasRenderer | WebGLRenderer, pathPrefix?: string | undefined);
+    asset_manager: {
+        pathPrefix: string;
+        assets: {};
+        errors: {};
+        toLoad: number;
+        loaded: number;
+        textureLoader: any;
+        downloader: Downloader;
+        start(path: any): string;
+        success(callback: any, path: any, asset: any): void;
+        error(callback: any, path: any, message: any): void;
+        loadAll(): Promise<any>;
+        setRawDataURI(path: any, data: any): void;
+        loadBinary(path: any, success?: () => void, error?: () => void): void;
+        loadText(path: any, success?: () => void, error?: () => void): void;
+        loadJson(path: any, success?: () => void, error?: () => void): void;
+        loadTexture(path: any, success?: () => void, error?: () => void): void;
+        loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+        get(path: any): any;
+        require(path: any): any;
+        remove(path: any): any;
+        removeAll(): void;
+        isLoadingComplete(): boolean;
+        getToLoad(): number;
+        getLoaded(): number;
+        dispose(): void;
+        hasErrors(): boolean;
+        getErrors(): {};
+    } | {
+        pathPrefix: string;
+        assets: {};
+        errors: {};
+        toLoad: number;
+        loaded: number;
+        textureLoader: any;
+        downloader: Downloader;
+        start(path: any): string;
+        success(callback: any, path: any, asset: any): void;
+        error(callback: any, path: any, message: any): void;
+        loadAll(): Promise<any>;
+        setRawDataURI(path: any, data: any): void;
+        loadBinary(path: any, success?: () => void, error?: () => void): void;
+        loadText(path: any, success?: () => void, error?: () => void): void;
+        loadJson(path: any, success?: () => void, error?: () => void): void;
+        loadTexture(path: any, success?: () => void, error?: () => void): void;
+        loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+        get(path: any): any;
+        require(path: any): any;
+        remove(path: any): any;
+        removeAll(): void;
+        isLoadingComplete(): boolean;
+        getToLoad(): number;
+        getLoaded(): number;
+        dispose(): void;
+        hasErrors(): boolean;
+        getErrors(): {};
+    };
+    pathPrefix: string;
     /**
      * set a default path prefix for assets location
      * @see loadAsset
@@ -626,22 +684,22 @@ declare class AssetManager {
      * load the given texture atlas
      * @param {string} atlas
      */
-    loadTextureAtlas(atlas: string, onload: any, onerror: any): any;
+    loadTextureAtlas(atlas: string, onload: any, onerror: any): void;
     /**
      * load the given skeleton .skel file
      * @param {string} skel
      */
-    loadBinary(skel: string, onload: any, onerror: any): any;
+    loadBinary(skel: string, onload: any, onerror: any): void;
     /**
      * load the given skeleton binary file
      * @param {string} skel
      */
-    loadText(skel: string, onload: any, onerror: any): any;
+    loadText(skel: string, onload: any, onerror: any): void;
     /**
      * load all defined spine assets
      * @see loadAsset
      */
-    loadAll(): any;
+    loadAll(): Promise<any>;
     /**
      * get the loaded skeleton data
      * @param {string} path
@@ -2443,34 +2501,6 @@ declare class PointAttachment extends VertexAttachment {
     computeWorldRotation(bone: any): number;
     copy(): PointAttachment;
 }
-/******************************************************************************
- * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
- *
- * Copyright (c) 2013-2023, Esoteric Software LLC
- *
- * Integration of the Spine Runtimes into software or otherwise creating
- * derivative works of the Spine Runtimes is permitted under the terms and
- * conditions of Section 2 of the Spine Editor License Agreement:
- * http://esotericsoftware.com/spine-editor-license
- *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
- * "Products"), provided that each user of the Products must obtain their own
- * Spine Editor license and redistribution of the Products in any form must
- * include this license and copyright notice.
- *
- * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
- * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *****************************************************************************/
 declare class PolygonBatcher {
     static getAndResetGlobalDrawCalls(): number;
     constructor(context: any, twoColorTint?: boolean, maxVertices?: number);
@@ -2485,10 +2515,9 @@ declare class PolygonBatcher {
     mesh: Mesh;
     srcColorBlend: any;
     srcAlphaBlend: any;
-    dstColorBlend: any;
-    dstAlphaBlend: any;
+    dstBlend: any;
     begin(shader: any): void;
-    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstColorBlend: any, dstAlphaBlend: any): void;
+    setBlendMode(blendMode: any, premultipliedAlpha: any): void;
     draw(texture: any, vertices: any, indices: any): void;
     flush(): void;
     end(): void;
@@ -2498,6 +2527,12 @@ declare class PolygonBatcher {
 declare namespace PolygonBatcher {
     let disableCulling: boolean;
     let globalDrawCalls: number;
+    let blendModesGL: {
+        srcRgb: number;
+        srcRgbPma: number;
+        dstRgb: number;
+        srcAlpha: number;
+    }[];
 }
 declare class Pool {
     constructor(instantiator: any);
@@ -2855,10 +2890,9 @@ declare class ShapeRenderer {
     mesh: Mesh;
     srcColorBlend: any;
     srcAlphaBlend: any;
-    dstColorBlend: any;
-    dstAlphaBlend: any;
+    dstBlend: any;
     begin(shader: any): void;
-    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstColorBlend: any, dstAlphaBlend: any): void;
+    setBlendMode(srcColorBlend: any, srcAlphaBlend: any, dstBlend: any): void;
     setColor(color: any): void;
     setColorWith(r: any, g: any, b: any, a: any): void;
     point(x: any, y: any, color: any): void;
@@ -3636,8 +3670,10 @@ declare class SlotData {
 declare class SpineCanvas {
     /** Constructs a new spine canvas, rendering to the provided HTML canvas. */
     constructor(canvas: any, config: any);
+    config: any;
     /** Tracks the current time, delta, and other time related statistics. */
     time: TimeKeeper;
+    disposed: boolean;
     htmlCanvas: any;
     context: ManagedWebGLRenderingContext;
     renderer: SceneRenderer;
@@ -3674,6 +3710,8 @@ declare class SpineCanvas {
     input: Input;
     /** Clears the canvas with the given color. The color values are given in the range [0,1]. */
     clear(r: any, g: any, b: any, a: any): void;
+    /** Disposes the app, so the update() and render() functions are no longer called. Calls the dispose() callback.*/
+    dispose(): void;
 }
 declare class StringSet {
     entries: {};
@@ -4258,13 +4296,6 @@ declare class VertexAttribute {
     name: any;
     type: any;
     numElements: any;
-}
-declare class WebGLBlendModeConverter {
-    static getDestGLBlendMode(blendMode: any): 1 | 771;
-    static getDestColorGLBlendMode(blendMode: any): 1 | 769 | 771;
-    static getDestAlphaGLBlendMode(blendMode: any, premultipliedAlpha?: boolean): 1 | 771;
-    static getSourceColorGLBlendMode(blendMode: any, premultipliedAlpha?: boolean): 1 | 770 | 774;
-    static getSourceAlphaGLBlendMode(blendMode: any, premultipliedAlpha?: boolean): 1 | 770;
 }
 declare class WindowedMean {
     constructor(windowSize?: number);
