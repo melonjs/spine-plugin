@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.0 - 2023-09-xx
+## 1.5.0 - 2023-09-23
 
 - fix the `addAnimation()` method not returning the corresponding set TrackEntry
 - fix the base renderable `flip[X/Y]` method when used/applied to the Spine renderable
