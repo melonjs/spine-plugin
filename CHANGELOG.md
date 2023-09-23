@@ -8,7 +8,7 @@
 - expose the `currentTrack` property to access the corresponding current animation track entry
 - clarify in the readme that the current plugin support both the 4.1 and 4.2-beta Spine runtime versions
 - the spine-plugin now requires to be properly registered using `me.plugin.register(SpinePlugin);`
-- the spine-plugin now requires melonJS v15.11.0 or higher
+- the spine-plugin now requires melonJS v15.12.0 or higher
 - add check for minimum melonJS version when the plugin is registered
 - restructure code to adhere to the updated plugin API and get a proper reference to the melonjs renderer instance
 
