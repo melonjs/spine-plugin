@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.6.0 - 2023-10-xx
+
 ## 1.5.0 - 2023-09-23
 
 - fix the `addAnimation()` method not returning the corresponding set TrackEntry
