@@ -1,7 +1,7 @@
-import { Math, Renderable, Vector2d, plugin } from "melonjs";
+import { Math, Renderable, Vector2d, plugin, version } from "melonjs";
 import * as spineWebGL from "@esotericsoftware/spine-webgl";
 import * as spineCanvas from "@esotericsoftware/spine-canvas";
-import { Vector2 } from "@esotericsoftware/spine-core";
+import { Vector2, Physics } from "@esotericsoftware/spine-core";
 
 import SkeletonRenderer from "./SkeletonRenderer.js";
 import { SpinePlugin } from "./SpinePlugin.js";
@@ -97,11 +97,21 @@ export default class Spine extends Renderable {
 
         if (this.renderer.WebGLVersion >= 1) {
             this.runtime = spineWebGL;
+            this.gl = this.renderer.gl;
+            this.canvas = ( version.split(".").map(Number).reduce((a, v, i) => a || v - "17.0.0".split(".")[i], 0) > 0 ) ? this.renderer.renderTarget.canvas : this.renderer.canvas;
+            this.context = this.renderer;
+            this.twoColorTint = true;
+            this.batcherShader = this.runtime.Shader.newTwoColoredTextured(this.canvas);
+            this.batcher = new this.runtime.PolygonBatcher(this.canvas, true);
+            this.shapesShader = this.runtime.Shader.newColored(this.canvas);
+            this.shapes = new this.runtime.ShapeRenderer(this.canvas);
+            this.skeletonRenderer = new this.runtime.SkeletonRenderer(this.canvas, true);
+            this.skeletonDebugRenderer = new this.runtime.SkeletonDebugRenderer(this.canvas);
         } else {
             this.runtime = spineCanvas;
+            this.skeletonRenderer = new SkeletonRenderer(this.runtime);
         }
 
-        this.skeletonRenderer = new SkeletonRenderer(this.runtime);
 
         // force anchorPoint to 0,0
         this.anchorPoint.set(0, 0);
@@ -127,7 +137,7 @@ export default class Spine extends Renderable {
     }
 
     /**
-     * Whether to enabler the debug mode when rendering the spine object
+     * Whether to enable the debug mode when rendering the spine object
      * @default false
      * @type {boolean}
      */
@@ -213,10 +223,14 @@ export default class Spine extends Renderable {
      * @returns {Spine} Reference to this object for method chaining
      */
     rotate(angle, v) {
-        // rotation for rootBone is in degrees (anti-clockwise)
-        this.skeleton.getRootBone().rotation -= Math.radToDeg(angle) + 90;
-        // melonJS rotate method takes radians
-        return super.rotate(angle, v);
+        if (this.renderer.WebGLVersion >= 1) {
+            this.skeleton.getRootBone().rotation -= Math.radToDeg(angle);
+        } else {
+            // rotation for rootBone is in degrees (anti-clockwise)
+            this.skeleton.getRootBone().rotation -= Math.radToDeg(angle) + 90;
+            // melonJS rotate method takes radians
+            return super.rotate(angle, v);
+        }
     }
 
      /**
@@ -307,26 +321,113 @@ export default class Spine extends Renderable {
             rootBone.y = this.pos.y;
 
             // world transforms
-            this.skeleton.updateWorldTransform();
+            this.skeleton.updateWorldTransform(Physics.update);
 
             // update Bounds
             this.updateBounds();
 
             // world transforms
-            //this.skeleton.updateWorldTransform();
+            //this.skeleton.updateWorldTransform(Physics.update);
         }
         return true;
     }
 
 
     /**
-     * draw this spine object
-     * @param {CanvasRenderer|WebGLRenderer} renderer - a renderer instance
-     * @param {Camera2d} [viewport] - the viewport to (re)draw
+     * Draw this Spine object using the appropriate renderer.
+     * If WebGL, it uses a PolygonBatcher and custom shader.
+     * Otherwise, it falls back to canvas renderer.
+     *
+     * @param {CanvasRenderer|WebGLRenderer} renderer - A renderer instance.
+     * @param {Camera2d} [viewport] - Optional camera viewport for rendering.
      */
     draw(renderer) {
-        this.skeletonRenderer.draw(renderer, this.skeleton);
+        if (this.renderer.WebGLVersion >= 1) {
+            this.renderer.flush();
+            this.enableRenderer(this.batcher);
+            this.skeletonRenderer.draw(this.batcher, this.skeleton, -1, -1, null);
+            if (this.skeletonRenderer.debugRendering) {
+                this.enableRenderer(this.shapes);
+                this.skeletonDebugRenderer.draw(this.shapes, this.skeleton);
+            }
+            this.end();
+            this.resetRenderer();
+        } else {
+            this.skeletonRenderer.draw(renderer, this.skeleton);
+        }
     }
+
+    /**
+     * Reset the renderer state after using a custom renderer.
+     * Rebinds the default vertex buffer and resets the compositor and shader.
+     */
+    resetRenderer() {
+        if (this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING) !== this.renderer.vertexBuffer) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.renderer.vertexBuffer);
+        }
+        this.renderer.currentCompositor = undefined;
+        this.renderer.currentProgram = undefined;
+        this.renderer.customShader = undefined;
+
+        this.renderer.setCompositor("quad");
+        this.renderer.currentCompositor.currentTextureUnit = undefined;
+
+        this.gl.disable(this.gl.SCISSOR_TEST);
+        this.gl.enable(this.gl.BLEND);
+    }
+
+    /**
+     * Enable a specific renderer, such as PolygonBatcher, and bind its shader.
+     * Ends the current renderer if one is already active.
+     *
+     * @param {PolygonBatcher} renderer - The renderer to enable.
+     */
+    enableRenderer(renderer) {
+        if (this.activeRenderer === renderer) return;
+        this.end();
+        if (renderer instanceof this.runtime.PolygonBatcher) {
+            this.batcherShader.bind();
+            this.batcherShader.setUniform4x4f(this.runtime.Shader.MVP_MATRIX, this.context.projectionMatrix.val);
+            this.batcherShader.setUniformi("u_texture", 0);
+            this.batcher.begin(this.batcherShader);
+            this.activeRenderer = this.batcher;
+        }
+        else if (renderer instanceof this.runtime.ShapeRenderer) {
+            this.shapesShader.bind();
+            this.shapesShader.setUniform4x4f(this.runtime.Shader.MVP_MATRIX, this.context.projectionMatrix.val);
+            this.shapes.begin(this.shapesShader);
+            this.activeRenderer = this.shapes;
+        }
+        else {
+            this.activeRenderer = this.skeletonDebugRenderer;
+        }
+    }
+
+    /**
+     * Ends the current active renderer, if any.
+     * Typically used to stop batching before switching renderers.
+     */
+    end() {
+        if (this.activeRenderer === this.batcher) {
+            this.batcher.end();
+        } else if (this.activeRenderer === this.shapes) {
+            this.shapes.end();
+        }
+        this.activeRenderer = null;
+    }
+
+    /**
+     * Disposes of all rendering-related resources to free GPU memory.
+     * Should be called when this Spine object is no longer needed.
+     */
+    dispose() {
+        this.batcher.dispose();
+        this.batcherShader.dispose();
+        this.shapes.dispose();
+        this.shapesShader.dispose();
+        this.skeletonDebugRenderer.dispose();
+    }
+
 
     /**
      * Sets the current animation for a track, discarding any queued animations.
@@ -447,7 +548,7 @@ export default class Spine extends Renderable {
         this.skeleton.setToSetupPose();
         // Spine uses Y-up, melonJS uses Y-down
         this.skeleton.getRootBone().scaleY *= -1;
-        this.skeleton.updateWorldTransform();
+        this.skeleton.updateWorldTransform(Physics.reset);
         // reset flip flags
         this.isSpineFlipped.y = false;
         this.isSpineFlipped.x = false;

@@ -15,6 +15,9 @@ export default class SpineRenderable extends Spine {
 		me.input.registerPointerEvent("pointerdown", this, () => {
 			this.rotate(1.5707970000000002);
 		});
+
+		// set true to enable the debug mode when rendering the spine object
+		this.skeletonRenderer.debugRendering = false;
 	}
 
 	update(dt) {

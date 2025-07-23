@@ -17,6 +17,35 @@ export default function player(x, y, atlasFile, jsonFile, defaultAnimation, skin
 		return;
 	}
 
+	/**
+	 * override current bindTexture function,
+	 * gl.bindTexture(gl.TEXTURE_2D, texture) should be called after
+	 * gl.activeTexture(gl.TEXTURE0 + unit) to prevent using spine image/texture
+	 */
+	const currentCompositor = me.video.renderer.currentCompositor;	
+	if (currentCompositor && currentCompositor.bindTexture2D) {
+		currentCompositor.bindTexture2D = function (texture, unit) {
+				let gl = currentCompositor.gl;
+
+			if (texture !== currentCompositor.boundTextures[unit]) {
+				currentCompositor.flush();
+				if (currentCompositor.currentTextureUnit !== unit) {
+					currentCompositor.currentTextureUnit = unit;
+					gl.activeTexture(gl.TEXTURE0 + unit);
+				}
+
+				gl.bindTexture(gl.TEXTURE_2D, texture);
+				currentCompositor.boundTextures[unit] = texture;
+
+			} else if (currentCompositor.currentTextureUnit !== unit) {
+				currentCompositor.flush();
+				currentCompositor.currentTextureUnit = unit;
+				gl.activeTexture(gl.TEXTURE0 + unit);
+				gl.bindTexture(gl.TEXTURE_2D, texture);
+			}
+		}
+	}
+
 	// add some keyboard shortcuts
 	me.event.on(me.event.KEYDOWN, (action, keyCode /*, edge */) => {
 		// toggle fullscreen on/off
@@ -33,8 +62,9 @@ export default function player(x, y, atlasFile, jsonFile, defaultAnimation, skin
 	me.plugin.register(DebugPanelPlugin);
 	me.plugin.register(SpinePlugin);
 
-	// allow cross-origin for image/texture loading
-	me.loader.crossOrigin = "anonymous";
+	// allow cross-origin for image/texture loading			
+	if ( me.version.split(".").map(Number).reduce((a, v, i) => a || v - "16.1.3".split(".")[i], 0) > 0  === false ) me.loader.crossOrigin = "anonymous";
+	else me.loader.setOptions({ crossOrigin: "anonymous" })
 
 	me.loader.preload(DataManifest, async function() {
 		me.state.change(me.state.DEFAULT, true);

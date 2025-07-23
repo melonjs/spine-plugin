@@ -59,15 +59,16 @@ declare class Spine extends Renderable {
         AnimationState: typeof AnimationState;
         AnimationStateAdapter: typeof AnimationStateAdapter;
         AnimationStateData: typeof AnimationStateData;
+        AssetCache: typeof AssetCache;
         AssetManager: {
             new (context: any, pathPrefix?: string, downloader?: Downloader): {
                 pathPrefix: string;
-                assets: {};
+                textureLoader: any;
+                downloader: Downloader;
+                cache: AssetCache;
                 errors: {};
                 toLoad: number;
                 loaded: number;
-                textureLoader: any;
-                downloader: Downloader;
                 start(path: any): string;
                 success(callback: any, path: any, asset: any): void;
                 error(callback: any, path: any, message: any): void;
@@ -76,8 +77,16 @@ declare class Spine extends Renderable {
                 loadBinary(path: any, success?: () => void, error?: () => void): void;
                 loadText(path: any, success?: () => void, error?: () => void): void;
                 loadJson(path: any, success?: () => void, error?: () => void): void;
+                reuseAssets(path: any, success?: () => void, error?: () => void): boolean;
                 loadTexture(path: any, success?: () => void, error?: () => void): void;
-                loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+                loadTextureAtlas(path: any, success: () => void, error: () => void, fileAlias: any): void;
+                loadTextureAtlasButNoTextures(path: any, success: () => void, error: () => void, fileAlias: any): void;
+                loadBinaryAsync(path: any): Promise<any>;
+                loadJsonAsync(path: any): Promise<any>;
+                loadTextureAsync(path: any): Promise<any>;
+                loadTextureAtlasAsync(path: any): Promise<any>;
+                loadTextureAtlasButNoTexturesAsync(path: any): Promise<any>;
+                setCache(cache: any): void;
                 get(path: any): any;
                 require(path: any): any;
                 remove(path: any): any;
@@ -86,6 +95,7 @@ declare class Spine extends Renderable {
                 getToLoad(): number;
                 getLoaded(): number;
                 dispose(): void;
+                disposeAsset(path: any): void;
                 hasErrors(): boolean;
                 getErrors(): {};
             };
@@ -127,6 +137,8 @@ declare class Spine extends Renderable {
         IkConstraint: typeof IkConstraint;
         IkConstraintData: typeof IkConstraintData;
         IkConstraintTimeline: typeof IkConstraintTimeline;
+        readonly Inherit: any;
+        InheritTimeline: typeof InheritTimeline;
         Input: typeof Input;
         IntSet: typeof IntSet;
         Interpolation: typeof Interpolation;
@@ -161,6 +173,16 @@ declare class Spine extends Renderable {
         PathConstraintMixTimeline: typeof PathConstraintMixTimeline;
         PathConstraintPositionTimeline: typeof PathConstraintPositionTimeline;
         PathConstraintSpacingTimeline: typeof PathConstraintSpacingTimeline;
+        readonly Physics: any;
+        PhysicsConstraintDampingTimeline: typeof PhysicsConstraintDampingTimeline;
+        PhysicsConstraintGravityTimeline: typeof PhysicsConstraintGravityTimeline;
+        PhysicsConstraintInertiaTimeline: typeof PhysicsConstraintInertiaTimeline;
+        PhysicsConstraintMassTimeline: typeof PhysicsConstraintMassTimeline;
+        PhysicsConstraintMixTimeline: typeof PhysicsConstraintMixTimeline;
+        PhysicsConstraintResetTimeline: typeof PhysicsConstraintResetTimeline;
+        PhysicsConstraintStrengthTimeline: typeof PhysicsConstraintStrengthTimeline;
+        PhysicsConstraintTimeline: typeof PhysicsConstraintTimeline;
+        PhysicsConstraintWindTimeline: typeof PhysicsConstraintWindTimeline;
         PointAttachment: typeof PointAttachment;
         PolygonBatcher: typeof PolygonBatcher;
         Pool: typeof Pool;
@@ -202,6 +224,7 @@ declare class Spine extends Renderable {
                 premultipliedAlpha: boolean;
                 tempColor: Color;
                 tempColor2: Color;
+                vertices: any[] | Float32Array<any>;
                 vertexSize: number;
                 twoColorTint: boolean;
                 renderable: Renderable;
@@ -210,8 +233,9 @@ declare class Spine extends Renderable {
                 temp2: Vector2;
                 temp3: Color;
                 temp4: Color;
-                vertices: any[] | Float32Array;
                 draw(batcher: any, skeleton: any, slotRangeStart?: number, slotRangeEnd?: number, transformer?: null): void;
+                /** Returns the {@link SkeletonClipping} used by this renderer for use with e.g. {@link Skeleton.getBounds} **/
+                getSkeletonClipping(): SkeletonClipping;
             };
             QUAD_TRIANGLES: number[];
         };
@@ -237,7 +261,6 @@ declare class Spine extends Renderable {
         TransformConstraint: typeof TransformConstraint;
         TransformConstraintData: typeof TransformConstraintData;
         TransformConstraintTimeline: typeof TransformConstraintTimeline;
-        readonly TransformMode: any;
         TranslateTimeline: typeof TranslateTimeline;
         TranslateXTimeline: typeof TranslateXTimeline;
         TranslateYTimeline: typeof TranslateYTimeline;
@@ -256,15 +279,16 @@ declare class Spine extends Renderable {
         AnimationState: typeof AnimationState;
         AnimationStateAdapter: typeof AnimationStateAdapter;
         AnimationStateData: typeof AnimationStateData;
+        AssetCache: typeof AssetCache;
         AssetManager: {
             new (pathPrefix?: string, downloader?: Downloader): {
                 pathPrefix: string;
-                assets: {};
+                textureLoader: any;
+                downloader: Downloader;
+                cache: AssetCache;
                 errors: {};
                 toLoad: number;
                 loaded: number;
-                textureLoader: any;
-                downloader: Downloader;
                 start(path: any): string;
                 success(callback: any, path: any, asset: any): void;
                 error(callback: any, path: any, message: any): void;
@@ -273,8 +297,16 @@ declare class Spine extends Renderable {
                 loadBinary(path: any, success?: () => void, error?: () => void): void;
                 loadText(path: any, success?: () => void, error?: () => void): void;
                 loadJson(path: any, success?: () => void, error?: () => void): void;
+                reuseAssets(path: any, success?: () => void, error?: () => void): boolean;
                 loadTexture(path: any, success?: () => void, error?: () => void): void;
-                loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+                loadTextureAtlas(path: any, success: () => void, error: () => void, fileAlias: any): void;
+                loadTextureAtlasButNoTextures(path: any, success: () => void, error: () => void, fileAlias: any): void;
+                loadBinaryAsync(path: any): Promise<any>;
+                loadJsonAsync(path: any): Promise<any>;
+                loadTextureAsync(path: any): Promise<any>;
+                loadTextureAtlasAsync(path: any): Promise<any>;
+                loadTextureAtlasButNoTexturesAsync(path: any): Promise<any>;
+                setCache(cache: any): void;
                 get(path: any): any;
                 require(path: any): any;
                 remove(path: any): any;
@@ -283,6 +315,7 @@ declare class Spine extends Renderable {
                 getToLoad(): number;
                 getLoaded(): number;
                 dispose(): void;
+                disposeAsset(path: any): void;
                 hasErrors(): boolean;
                 getErrors(): {};
             };
@@ -321,6 +354,8 @@ declare class Spine extends Renderable {
         IkConstraint: typeof IkConstraint;
         IkConstraintData: typeof IkConstraintData;
         IkConstraintTimeline: typeof IkConstraintTimeline;
+        readonly Inherit: any;
+        InheritTimeline: typeof InheritTimeline;
         IntSet: typeof IntSet;
         Interpolation: typeof Interpolation;
         MathUtils: typeof MathUtils;
@@ -333,6 +368,16 @@ declare class Spine extends Renderable {
         PathConstraintMixTimeline: typeof PathConstraintMixTimeline;
         PathConstraintPositionTimeline: typeof PathConstraintPositionTimeline;
         PathConstraintSpacingTimeline: typeof PathConstraintSpacingTimeline;
+        readonly Physics: any;
+        PhysicsConstraintDampingTimeline: typeof PhysicsConstraintDampingTimeline;
+        PhysicsConstraintGravityTimeline: typeof PhysicsConstraintGravityTimeline;
+        PhysicsConstraintInertiaTimeline: typeof PhysicsConstraintInertiaTimeline;
+        PhysicsConstraintMassTimeline: typeof PhysicsConstraintMassTimeline;
+        PhysicsConstraintMixTimeline: typeof PhysicsConstraintMixTimeline;
+        PhysicsConstraintResetTimeline: typeof PhysicsConstraintResetTimeline;
+        PhysicsConstraintStrengthTimeline: typeof PhysicsConstraintStrengthTimeline;
+        PhysicsConstraintTimeline: typeof PhysicsConstraintTimeline;
+        PhysicsConstraintWindTimeline: typeof PhysicsConstraintWindTimeline;
         PointAttachment: typeof PointAttachment;
         Pool: typeof Pool;
         readonly PositionMode: any;
@@ -362,17 +407,17 @@ declare class Spine extends Renderable {
         SkeletonJson: typeof SkeletonJson;
         SkeletonRenderer: {
             new (context: any): {
+                ctx: any;
                 triangleRendering: boolean;
                 debugRendering: boolean;
-                vertices: any[] | Float32Array;
+                vertices: any[] | Float32Array<any>;
                 tempColor: Color;
-                ctx: any;
                 draw(skeleton: any): void;
                 drawImages(skeleton: any): void;
                 drawTriangles(skeleton: any): void;
                 drawTriangle(img: any, x0: any, y0: any, u0: any, v0: any, x1: any, y1: any, u1: any, v1: any, x2: any, y2: any, u2: any, v2: any): void;
-                computeRegionVertices(slot: any, region: any, pma: any): any[] | Float32Array;
-                computeMeshVertices(slot: any, mesh: any, pma: any): any[] | Float32Array;
+                computeRegionVertices(slot: any, region: any, pma: any): any[] | Float32Array<any>;
+                computeMeshVertices(slot: any, mesh: any, pma: any): any[] | Float32Array<any>;
             };
             QUAD_TRIANGLES: number[];
             VERTEX_SIZE: number;
@@ -396,7 +441,6 @@ declare class Spine extends Renderable {
         TransformConstraint: typeof TransformConstraint;
         TransformConstraintData: typeof TransformConstraintData;
         TransformConstraintTimeline: typeof TransformConstraintTimeline;
-        readonly TransformMode: any;
         TranslateTimeline: typeof TranslateTimeline;
         TranslateXTimeline: typeof TranslateXTimeline;
         TranslateYTimeline: typeof TranslateYTimeline;
@@ -410,7 +454,23 @@ declare class Spine extends Renderable {
     plugin: plugin.BasePlugin;
     renderer: any;
     animationState: any;
-    skeletonRenderer: SkeletonRenderer;
+    skeletonRenderer: {
+        premultipliedAlpha: boolean;
+        tempColor: Color;
+        tempColor2: Color;
+        vertices: any[] | Float32Array<any>;
+        vertexSize: number;
+        twoColorTint: boolean;
+        renderable: Renderable;
+        clipper: SkeletonClipping;
+        temp: Vector2;
+        temp2: Vector2;
+        temp3: Color;
+        temp4: Color;
+        draw(batcher: any, skeleton: any, slotRangeStart?: number, slotRangeEnd?: number, transformer?: null): void;
+        /** Returns the {@link SkeletonClipping} used by this renderer for use with e.g. {@link Skeleton.getBounds} **/
+        getSkeletonClipping(): SkeletonClipping;
+    } | SkeletonRenderer;
     root: any;
     boneOffset: Vector2;
     boneSize: Vector2;
@@ -437,12 +497,21 @@ declare class Spine extends Renderable {
      * this.currentTrack.timeScale = 1;
      */
     currentTrack: TrackEntry;
+    gl: any;
+    canvas: any;
+    context: any;
+    twoColorTint: boolean | undefined;
+    batcherShader: Shader | undefined;
+    batcher: PolygonBatcher | undefined;
+    shapesShader: Shader | undefined;
+    shapes: ShapeRenderer | undefined;
+    skeletonDebugRenderer: SkeletonDebugRenderer | undefined;
     mixTime: number;
     jsonFile: number | undefined;
     atlasFile: number | undefined;
-    set debugRendering(arg: boolean);
+    set debugRendering(value: boolean);
     /**
-     * Whether to enabler the debug mode when rendering the spine object
+     * Whether to enable the debug mode when rendering the spine object
      * @default false
      * @type {boolean}
      */
@@ -465,20 +534,20 @@ declare class Spine extends Renderable {
      * // add it to the game world
      * me.game.world.addChild(spineAlien);
      */
-    setSkeleton(atlasFile?: number | undefined, jsonFile?: number | undefined): void;
+    setSkeleton(atlasFile?: number, jsonFile?: number): void;
     /**
      * flip the Spine skeleton on the horizontal axis (around its center)
      * @param {boolean} [flip=true] - `true` to flip this Spine object.
      * @returns {Spine} Reference to this object for method chaining
      */
-    flipX(flip?: boolean | undefined): Spine;
+    flipX(flip?: boolean): Spine;
     isDirty: boolean | undefined;
     /**
      * flip the Spine skeleton on the vertical axis (around its center)
      * @param {boolean} [flip=true] - `true` to flip this Spine object.
      * @returns {Spine} Reference to this object for method chaining
      */
-    flipY(flip?: boolean | undefined): Spine;
+    flipY(flip?: boolean): Spine;
     /**
     * Rotate this Spine object by the specified angle (in radians).
     * @param {number} angle - The angle to rotate (in radians)
@@ -496,14 +565,14 @@ declare class Spine extends Renderable {
     * @param {number} [y=x] - a number representing the ordinate of the scaling vector.
     * @returns {Spine} Reference to this object for method chaining
     */
-    scale(x: number, y?: number | undefined): Spine;
+    scale(x: number, y?: number): Spine;
     /**
      * update the bounding box for this spine object.
      * (this will automatically update the bounds of the entire skeleton animation)
      * @param {boolean} [absolute=true] - update the bounds size and position in (world) absolute coordinates
      * @returns {Bounds} this shape bounding box Rectangle object
      */
-    updateBounds(absolute?: boolean | undefined): Bounds;
+    updateBounds(absolute?: boolean): Bounds;
     /**
      * update function (automatically called by melonJS).
      * @param {number} dt - time since the last update in milliseconds.
@@ -511,11 +580,37 @@ declare class Spine extends Renderable {
      */
     update(dt: number): boolean;
     /**
-     * draw this spine object
-     * @param {CanvasRenderer|WebGLRenderer} renderer - a renderer instance
-     * @param {Camera2d} [viewport] - the viewport to (re)draw
+     * Draw this Spine object using the appropriate renderer.
+     * If WebGL, it uses a PolygonBatcher and custom shader.
+     * Otherwise, it falls back to canvas renderer.
+     *
+     * @param {CanvasRenderer|WebGLRenderer} renderer - A renderer instance.
+     * @param {Camera2d} [viewport] - Optional camera viewport for rendering.
      */
     draw(renderer: CanvasRenderer | WebGLRenderer): void;
+    /**
+     * Reset the renderer state after using a custom renderer.
+     * Rebinds the default vertex buffer and resets the compositor and shader.
+     */
+    resetRenderer(): void;
+    /**
+     * Enable a specific renderer, such as PolygonBatcher, and bind its shader.
+     * Ends the current renderer if one is already active.
+     *
+     * @param {PolygonBatcher} renderer - The renderer to enable.
+     */
+    enableRenderer(renderer: PolygonBatcher): void;
+    activeRenderer: PolygonBatcher | ShapeRenderer | SkeletonDebugRenderer | null | undefined;
+    /**
+     * Ends the current active renderer, if any.
+     * Typically used to stop batching before switching renderers.
+     */
+    end(): void;
+    /**
+     * Disposes of all rendering-related resources to free GPU memory.
+     * Should be called when this Spine object is no longer needed.
+     */
+    dispose(): void;
     /**
      * Sets the current animation for a track, discarding any queued animations.
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
@@ -523,7 +618,7 @@ declare class Spine extends Renderable {
      * @param {boolean} [loop= false] - If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its duration.
      * @returns {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose event occurs.
      */
-    setAnimationByIndex(track_index?: number | undefined, index?: number | undefined, loop?: boolean | undefined): TrackEntry;
+    setAnimationByIndex(track_index?: number, index?: number, loop?: boolean): TrackEntry;
     /**
      * Sets the current animation for a track, discarding any queued animations.
      * @param {number} [track_index] -  If the formerly current track entry was never applied to a skeleton, it is replaced (not mixed from). In either case trackEnd determines when the track is cleared.
@@ -534,7 +629,7 @@ declare class Spine extends Renderable {
      * // set the current animation
      * spineAlien.setAnimation(0, "death", true);
      */
-    setAnimation(track_index?: number | undefined, name?: string | undefined, loop?: boolean | undefined): TrackEntry;
+    setAnimation(track_index?: number, name?: string, loop?: boolean): TrackEntry;
     /**
      * return true if the given animation name is the current running animation for the current track.
      * @name isCurrentAnimation
@@ -551,7 +646,7 @@ declare class Spine extends Renderable {
      * @param {number} [delay=0] - If > 0, sets delay. If <= 0, the delay set is the duration of the previous track entry minus any mix duration plus the specified `delay` (ie the mix ends at (`delay` = 0) or before (`delay` < 0) the previous track entry duration). If the previous entry is looping, its next loop completion is used instead of its duration.
      * @return {TrackEntry} A track entry to allow further customization of animation playback. References to the track entry must not be kept after the dispose} event occurs.
      */
-    addAnimationByIndex(track_index: any, index: any, loop?: boolean, delay?: number | undefined): TrackEntry;
+    addAnimationByIndex(track_index: any, index: any, loop?: boolean, delay?: number): TrackEntry;
     addAnimationByName(track_index: any, animationName: any, loop?: boolean, delay?: number): void;
     getSpinePosition(): Vector2d;
     setSpineSize(width: any, height: any): void;
@@ -602,15 +697,15 @@ declare class AssetManager {
      * @param {CanvasRenderer|WebGLRenderer} renderer - a melonJS renderer instance
      * @param {string} [pathPrefix=""] - a default path prefix for assets location
      */
-    constructor(renderer: CanvasRenderer | WebGLRenderer, pathPrefix?: string | undefined);
+    constructor(renderer: CanvasRenderer | WebGLRenderer, pathPrefix?: string);
     asset_manager: {
         pathPrefix: string;
-        assets: {};
+        textureLoader: any;
+        downloader: Downloader;
+        cache: AssetCache;
         errors: {};
         toLoad: number;
         loaded: number;
-        textureLoader: any;
-        downloader: Downloader;
         start(path: any): string;
         success(callback: any, path: any, asset: any): void;
         error(callback: any, path: any, message: any): void;
@@ -619,8 +714,16 @@ declare class AssetManager {
         loadBinary(path: any, success?: () => void, error?: () => void): void;
         loadText(path: any, success?: () => void, error?: () => void): void;
         loadJson(path: any, success?: () => void, error?: () => void): void;
+        reuseAssets(path: any, success?: () => void, error?: () => void): boolean;
         loadTexture(path: any, success?: () => void, error?: () => void): void;
-        loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+        loadTextureAtlas(path: any, success: () => void, error: () => void, fileAlias: any): void;
+        loadTextureAtlasButNoTextures(path: any, success: () => void, error: () => void, fileAlias: any): void;
+        loadBinaryAsync(path: any): Promise<any>;
+        loadJsonAsync(path: any): Promise<any>;
+        loadTextureAsync(path: any): Promise<any>;
+        loadTextureAtlasAsync(path: any): Promise<any>;
+        loadTextureAtlasButNoTexturesAsync(path: any): Promise<any>;
+        setCache(cache: any): void;
         get(path: any): any;
         require(path: any): any;
         remove(path: any): any;
@@ -629,16 +732,17 @@ declare class AssetManager {
         getToLoad(): number;
         getLoaded(): number;
         dispose(): void;
+        disposeAsset(path: any): void;
         hasErrors(): boolean;
         getErrors(): {};
     } | {
         pathPrefix: string;
-        assets: {};
+        textureLoader: any;
+        downloader: Downloader;
+        cache: AssetCache;
         errors: {};
         toLoad: number;
         loaded: number;
-        textureLoader: any;
-        downloader: Downloader;
         start(path: any): string;
         success(callback: any, path: any, asset: any): void;
         error(callback: any, path: any, message: any): void;
@@ -647,8 +751,16 @@ declare class AssetManager {
         loadBinary(path: any, success?: () => void, error?: () => void): void;
         loadText(path: any, success?: () => void, error?: () => void): void;
         loadJson(path: any, success?: () => void, error?: () => void): void;
+        reuseAssets(path: any, success?: () => void, error?: () => void): boolean;
         loadTexture(path: any, success?: () => void, error?: () => void): void;
-        loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+        loadTextureAtlas(path: any, success: () => void, error: () => void, fileAlias: any): void;
+        loadTextureAtlasButNoTextures(path: any, success: () => void, error: () => void, fileAlias: any): void;
+        loadBinaryAsync(path: any): Promise<any>;
+        loadJsonAsync(path: any): Promise<any>;
+        loadTextureAsync(path: any): Promise<any>;
+        loadTextureAtlasAsync(path: any): Promise<any>;
+        loadTextureAtlasButNoTexturesAsync(path: any): Promise<any>;
+        setCache(cache: any): void;
         get(path: any): any;
         require(path: any): any;
         remove(path: any): any;
@@ -657,6 +769,7 @@ declare class AssetManager {
         getToLoad(): number;
         getLoaded(): number;
         dispose(): void;
+        disposeAsset(path: any): void;
         hasErrors(): boolean;
         getErrors(): {};
     };
@@ -708,17 +821,17 @@ declare class AssetManager {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -731,8 +844,8 @@ declare class AssetManager {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Renderable {
     constructor(vertices: any, numVertices: any, numFloats: any);
@@ -742,22 +855,22 @@ declare class Renderable {
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 declare class AlphaTimeline extends CurveTimeline1 {
-    slotIndex: any;
+    slotIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -770,15 +883,17 @@ declare class AlphaTimeline extends CurveTimeline1 {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** A simple container for a list of timelines and a name. */
 declare class Animation {
     constructor(name: any, timelines: any, duration: any);
+    /** The animation's name, which is unique across all animations in the skeleton. */
+    name: any;
     timelines: any[];
     timelineIds: StringSet;
-    name: any;
+    /** The duration of the animation in seconds, which is the highest time of all keys in the timeline. */
     duration: any;
     setTimelines(timelines: any): void;
     hasTimeline(ids: any): boolean;
@@ -791,17 +906,17 @@ declare class Animation {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -814,16 +929,19 @@ declare class Animation {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Applies animations over time, queues animations for later playback, mixes (crossfading) between animations, and applies
  * multiple animations on top of each other (layering).
  *
  * See [Applying Animations](http://esotericsoftware.com/spine-applying-animations/) in the Spine Runtimes Guide. */
 declare class AnimationState {
+    static _emptyAnimation: Animation;
     static emptyAnimation(): Animation;
     constructor(data: any);
+    /** The AnimationStateData to look up mix durations. */
+    data: any;
     /** The list of tracks that currently have animations, which may contain null entries. */
     tracks: any[];
     /** Multiplier for the delta time when the animation state is updated, causing time for all animations and mixes to play slower
@@ -838,7 +956,6 @@ declare class AnimationState {
     propertyIDs: StringSet;
     animationsChanged: boolean;
     trackEntryPool: Pool;
-    data: any;
     /** Increments each track entry {@link TrackEntry#trackTime()}, setting queued animations as current if needed. */
     update(delta: any): void;
     /** Returns true when all mixing from entries are complete. */
@@ -937,9 +1054,6 @@ declare class AnimationState {
      * are not wanted because new animations are being set. */
     clearListenerNotifications(): void;
 }
-declare namespace AnimationState {
-    let _emptyAnimation: Animation;
-}
 declare class AnimationStateAdapter {
     start(entry: any): void;
     interrupt(entry: any): void;
@@ -950,17 +1064,17 @@ declare class AnimationStateAdapter {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -973,16 +1087,17 @@ declare class AnimationStateAdapter {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores mix (crossfade) durations to be applied when {@link AnimationState} animations are changed. */
 declare class AnimationStateData {
     constructor(skeletonData: any);
+    /** The SkeletonData to look up animations when they are specified by name. */
+    skeletonData: any;
     animationToMixTime: {};
     /** The mix duration to use when no mix duration has been defined between two animations. */
     defaultMix: number;
-    skeletonData: any;
     /** Sets a mix duration by animation name.
      *
      * See {@link #setMixWith()}. */
@@ -995,12 +1110,20 @@ declare class AnimationStateData {
       * no mix duration has been set. */
     getMix(from: any, to: any): any;
 }
+declare class AssetCache {
+    static AVAILABLE_CACHES: Map<any, any>;
+    static getCache(id: any): any;
+    assets: {};
+    assetsRefCount: {};
+    assetsLoaded: {};
+    addAsset(path: any, asset: any): Promise<void>;
+}
 declare class Downloader {
     callbacks: {};
     rawDataUris: {};
     dataUriToString(dataUri: any): any;
-    base64ToUint8Array(base64: any): Uint8Array;
-    dataUriToUint8Array(dataUri: any): Uint8Array;
+    base64ToUint8Array(base64: any): Uint8Array<ArrayBuffer>;
+    dataUriToUint8Array(dataUri: any): Uint8Array<ArrayBuffer>;
     downloadText(url: any, success: any, error: any): void;
     downloadJson(url: any, success: any, error: any): void;
     downloadBinary(url: any, success: any, error: any): void;
@@ -1009,17 +1132,17 @@ declare class Downloader {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1032,18 +1155,18 @@ declare class Downloader {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class AssetManagerBase {
-    constructor(textureLoader: any, pathPrefix?: string, downloader?: Downloader);
+    constructor(textureLoader: any, pathPrefix?: string, downloader?: Downloader, cache?: AssetCache);
     pathPrefix: string;
-    assets: {};
+    textureLoader: any;
+    downloader: Downloader;
+    cache: AssetCache;
     errors: {};
     toLoad: number;
     loaded: number;
-    textureLoader: any;
-    downloader: Downloader;
     start(path: any): string;
     success(callback: any, path: any, asset: any): void;
     error(callback: any, path: any, message: any): void;
@@ -1052,8 +1175,16 @@ declare class AssetManagerBase {
     loadBinary(path: any, success?: () => void, error?: () => void): void;
     loadText(path: any, success?: () => void, error?: () => void): void;
     loadJson(path: any, success?: () => void, error?: () => void): void;
+    reuseAssets(path: any, success?: () => void, error?: () => void): boolean;
     loadTexture(path: any, success?: () => void, error?: () => void): void;
-    loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+    loadTextureAtlas(path: any, success: () => void, error: () => void, fileAlias: any): void;
+    loadTextureAtlasButNoTextures(path: any, success: () => void, error: () => void, fileAlias: any): void;
+    loadBinaryAsync(path: any): Promise<any>;
+    loadJsonAsync(path: any): Promise<any>;
+    loadTextureAsync(path: any): Promise<any>;
+    loadTextureAtlasAsync(path: any): Promise<any>;
+    loadTextureAtlasButNoTexturesAsync(path: any): Promise<any>;
+    setCache(cache: any): void;
     get(path: any): any;
     require(path: any): any;
     remove(path: any): any;
@@ -1062,22 +1193,23 @@ declare class AssetManagerBase {
     getToLoad(): number;
     getLoaded(): number;
     dispose(): void;
+    disposeAsset(path: any): void;
     hasErrors(): boolean;
     getErrors(): {};
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1090,8 +1222,8 @@ declare class AssetManagerBase {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An {@link AttachmentLoader} that configures attachments using texture regions from an {@link TextureAtlas}.
  *
@@ -1110,17 +1242,17 @@ declare class AtlasAttachmentLoader {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1133,8 +1265,8 @@ declare class AtlasAttachmentLoader {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** The base class for all attachments. */
 declare class Attachment {
@@ -1143,7 +1275,8 @@ declare class Attachment {
 }
 /** Changes a slot's {@link Slot#attachment}. */
 declare class AttachmentTimeline extends Timeline {
-    slotIndex: any;
+    slotIndex: number;
+    /** The attachment name for each key frame. May contain null values to clear the attachment. */
     attachmentNames: any[];
     /** Sets the time in seconds and the attachment name for the specified key frame. */
     setFrame(frame: any, time: any, attachmentName: any): void;
@@ -1151,10 +1284,10 @@ declare class AttachmentTimeline extends Timeline {
     setAttachment(skeleton: any, slot: any, attachmentName: any): void;
 }
 declare class BinaryInput {
-    constructor(data: any, strings?: any[], index?: number, buffer?: DataView);
+    constructor(data: any, strings?: any[], index?: number, buffer?: DataView<any>);
     strings: any[];
     index: number;
-    buffer: DataView;
+    buffer: DataView<any>;
     readByte(): number;
     readUnsignedByte(): number;
     readShort(): number;
@@ -1167,17 +1300,17 @@ declare class BinaryInput {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1190,8 +1323,8 @@ declare class BinaryInput {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores a bone's current pose.
  *
@@ -1201,8 +1334,12 @@ declare class BinaryInput {
 declare class Bone {
     /** @param parent May be null. */
     constructor(data: any, skeleton: any, parent: any);
+    /** The bone's setup pose data. */
+    data: any;
+    /** The skeleton this bone belongs to. */
+    skeleton: any;
     /** The parent bone, or null if this is the root bone. */
-    parent: any;
+    parent: null;
     /** The immediate children of this bone. */
     children: any[];
     /** The local x translation. */
@@ -1245,15 +1382,14 @@ declare class Bone {
     worldY: number;
     /** The world Y position. If changed, {@link #updateAppliedTransform()} should be called. */
     worldX: number;
+    inherit: any;
     sorted: boolean;
     active: boolean;
-    data: any;
-    skeleton: any;
     /** Returns false when the bone has not been computed because {@link BoneData#skinRequired} is true and the
       * {@link Skeleton#skin active skin} does not {@link Skin#bones contain} this bone. */
     isActive(): boolean;
     /** Computes the world transform using the parent bone and this bone's local applied transform. */
-    update(): void;
+    update(physics: any): void;
     /** Computes the world transform using the parent bone and this bone's local transform.
      *
      * See {@link #updateWorldTransformWith()}. */
@@ -1266,14 +1402,6 @@ declare class Bone {
     updateWorldTransformWith(x: any, y: any, rotation: any, scaleX: any, scaleY: any, shearX: any, shearY: any): void;
     /** Sets this bone's local transform to the setup pose. */
     setToSetupPose(): void;
-    /** The world rotation for the X axis, calculated using {@link #a} and {@link #c}. */
-    getWorldRotationX(): number;
-    /** The world rotation for the Y axis, calculated using {@link #b} and {@link #d}. */
-    getWorldRotationY(): number;
-    /** The magnitude (always positive) of the world scale X, calculated using {@link #a} and {@link #c}. */
-    getWorldScaleX(): number;
-    /** The magnitude (always positive) of the world scale Y, calculated using {@link #b} and {@link #d}. */
-    getWorldScaleY(): number;
     /** Computes the applied transform values from the world transform.
      *
      * If the world transform is modified (by a constraint, {@link #rotateWorld(float)}, etc) then this method should be called so
@@ -1283,33 +1411,45 @@ declare class Bone {
      * Some information is ambiguous in the world transform, such as -1,-1 scale versus 180 rotation. The applied transform after
      * calling this method is equivalent to the local transform used to compute the world transform, but may not be identical. */
     updateAppliedTransform(): void;
+    /** The world rotation for the X axis, calculated using {@link #a} and {@link #c}. */
+    getWorldRotationX(): number;
+    /** The world rotation for the Y axis, calculated using {@link #b} and {@link #d}. */
+    getWorldRotationY(): number;
+    /** The magnitude (always positive) of the world scale X, calculated using {@link #a} and {@link #c}. */
+    getWorldScaleX(): number;
+    /** The magnitude (always positive) of the world scale Y, calculated using {@link #b} and {@link #d}. */
+    getWorldScaleY(): number;
     /** Transforms a point from world coordinates to the bone's local coordinates. */
     worldToLocal(world: any): any;
     /** Transforms a point from the bone's local coordinates to world coordinates. */
     localToWorld(local: any): any;
+    /** Transforms a point from world coordinates to the parent bone's local coordinates. */
+    worldToParent(world: any): any;
+    /** Transforms a point from the parent bone's coordinates to world coordinates. */
+    parentToWorld(world: any): any;
     /** Transforms a world rotation to a local rotation. */
     worldToLocalRotation(worldRotation: any): number;
     /** Transforms a local rotation to a world rotation. */
     localToWorldRotation(localRotation: any): number;
     /** Rotates the world transform the specified amount.
      * <p>
-     * After changes are made to the world transform, {@link #updateAppliedTransform()} should be called and {@link #update()} will
-     * need to be called on any child bones, recursively. */
+     * After changes are made to the world transform, {@link #updateAppliedTransform()} should be called and
+     * {@link #update(Physics)} will need to be called on any child bones, recursively. */
     rotateWorld(degrees: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1322,23 +1462,25 @@ declare class Bone {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link Bone}. */
 declare class BoneData {
     constructor(index: any, name: any, parent: any);
     /** The index of the bone in {@link Skeleton#getBones()}. */
-    index: any;
+    index: number;
+    /** The name of the bone, which is unique across all bones in the skeleton. */
+    name: any;
     /** @returns May be null. */
-    parent: any;
+    parent: null;
     /** The bone's length. */
     length: number;
     /** The local x translation. */
     x: number;
     /** The local y translation. */
     y: number;
-    /** The local rotation. */
+    /** The local rotation in degrees, counter clockwise. */
     rotation: number;
     /** The local scaleX. */
     scaleX: number;
@@ -1349,7 +1491,7 @@ declare class BoneData {
     /** The local shearX. */
     shearY: number;
     /** The transform mode for how parent world transforms affect this bone. */
-    transformMode: any;
+    inherit: any;
     /** When true, {@link Skeleton#updateWorldTransform()} only updates this bone if the {@link Skeleton#skin} contains this
       * bone.
       * @see Skin#bones */
@@ -1357,21 +1499,24 @@ declare class BoneData {
     /** The color of the bone as it was in Spine. Available only when nonessential data was exported. Bones are not usually
      * rendered at runtime. */
     color: Color;
-    name: any;
+    /** The bone icon as it was in Spine, or null if nonessential data was not exported. */
+    icon: any;
+    /** False if the bone was hidden in Spine and nonessential data was exported. Does not affect runtime rendering. */
+    visible: boolean;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1384,8 +1529,8 @@ declare class BoneData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment with vertices that make up a polygon. Can be used for hit detection, creating physics bodies, spawning particle
  * effects, and more.
@@ -1398,17 +1543,17 @@ declare class BoundingBoxAttachment extends VertexAttachment {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1421,8 +1566,8 @@ declare class BoundingBoxAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class CameraController {
     constructor(canvas: any, camera: any);
@@ -1431,17 +1576,17 @@ declare class CameraController {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1454,23 +1599,28 @@ declare class CameraController {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment with vertices that make up a polygon used for clipping the rendering of other attachments. */
 declare class ClippingAttachment extends VertexAttachment {
     /** Clipping is performed between the clipping polygon's slot and the end slot. Returns null if clipping is done until the end of
      * the skeleton's rendering. */
-    endSlot: any;
+    endSlot: null;
     /** The color of the clipping polygon as it was in Spine. Available only when nonessential data was exported. Clipping polygons
      * are not usually rendered at runtime. */
     color: Color;
     copy(): ClippingAttachment;
 }
 declare class Color {
+    static WHITE: Color;
+    static RED: Color;
+    static GREEN: Color;
+    static BLUE: Color;
+    static MAGENTA: Color;
     static rgba8888ToColor(color: any, value: any): void;
     static rgb888ToColor(color: any, value: any): void;
-    static fromString(hex: any): Color;
+    static fromString(hex: any, color?: Color): Color;
     constructor(r?: number, g?: number, b?: number, a?: number);
     r: number;
     g: number;
@@ -1481,13 +1631,7 @@ declare class Color {
     setFromString(hex: any): this;
     add(r: any, g: any, b: any, a: any): this;
     clamp(): this;
-}
-declare namespace Color {
-    let WHITE: Color;
-    let RED: Color;
-    let GREEN: Color;
-    let BLUE: Color;
-    let MAGENTA: Color;
+    toRgb888(): number;
 }
 declare class Color2Attribute extends VertexAttribute {
     constructor();
@@ -1497,17 +1641,17 @@ declare class ColorAttribute extends VertexAttribute {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1520,8 +1664,8 @@ declare class ColorAttribute extends VertexAttribute {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** The base class for all constraint datas. */
 declare class ConstraintData {
@@ -1533,7 +1677,7 @@ declare class ConstraintData {
 /** The base class for timelines that use interpolation between key frame values. */
 declare class CurveTimeline extends Timeline {
     constructor(frameCount: any, bezierCount: any, propertyIds: any);
-    curves: any[] | Float32Array;
+    curves: any[] | Float32Array<any>;
     /** Sets the specified key frame to linear interpolation. */
     setLinear(frame: any): void;
     /** Sets the specified key frame to stepped interpolation. */
@@ -1569,6 +1713,10 @@ declare class CurveTimeline1 extends CurveTimeline {
     setFrame(frame: any, time: any, value: any): void;
     /** Returns the interpolated value for the specified time. */
     getCurveValue(time: any): any;
+    getRelativeValue(time: any, alpha: any, blend: any, current: any, setup: any): any;
+    getAbsoluteValue(time: any, alpha: any, blend: any, current: any, setup: any): any;
+    getAbsoluteValue2(time: any, alpha: any, blend: any, current: any, setup: any, value: any): any;
+    getScaleValue(time: any, alpha: any, blend: any, direction: any, current: any, setup: any): any;
 }
 /** The base class for a {@link CurveTimeline} which sets two properties. */
 declare class CurveTimeline2 extends CurveTimeline {
@@ -1586,8 +1734,10 @@ declare class DebugUtils {
 /** Changes a slot's {@link Slot#deform} to deform a {@link VertexAttachment}. */
 declare class DeformTimeline extends CurveTimeline {
     constructor(frameCount: any, bezierCount: any, slotIndex: any, attachment: any);
-    slotIndex: any;
+    slotIndex: number;
+    /** The attachment that will be deformed. */
     attachment: any;
+    /** The vertices for each key frame. */
     vertices: any[];
     /** Sets the time in seconds and the vertices for the specified key frame.
      * @param vertices Vertex positions for an unweighted VertexAttachment, or deform offsets if it has weights. */
@@ -1597,7 +1747,9 @@ declare class DeformTimeline extends CurveTimeline {
 }
 /** Changes a skeleton's {@link Skeleton#drawOrder}. */
 declare class DrawOrderTimeline extends Timeline {
+    static propertyIds: string[];
     constructor(frameCount: any);
+    /** The draw order for each key frame. See {@link #setFrame(int, float, int[])}. */
     drawOrders: any[];
     /** Sets the time in seconds and the draw order for the specified key frame.
      * @param drawOrder For each slot in {@link Skeleton#slots}, the index of the new draw order. May be null to use setup pose
@@ -1605,22 +1757,19 @@ declare class DrawOrderTimeline extends Timeline {
     setFrame(frame: any, time: any, drawOrder: any): void;
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
 }
-declare namespace DrawOrderTimeline {
-    let propertyIds: string[];
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1633,8 +1782,8 @@ declare namespace DrawOrderTimeline {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose values for an {@link Event}.
  *
@@ -1643,27 +1792,27 @@ declare namespace DrawOrderTimeline {
  * [Events](http://esotericsoftware.com/spine-events) in the Spine User Guide. */
 declare class Event {
     constructor(time: any, data: any);
+    data: any;
     intValue: number;
     floatValue: number;
-    stringValue: any;
-    time: any;
+    stringValue: null;
+    time: number;
     volume: number;
     balance: number;
-    data: any;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1676,21 +1825,21 @@ declare class Event {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose values for an {@link Event}.
  *
  * See [Events](http://esotericsoftware.com/spine-events) in the Spine User Guide. */
 declare class EventData {
     constructor(name: any);
+    name: any;
     intValue: number;
     floatValue: number;
-    stringValue: any;
-    audioPath: any;
+    stringValue: null;
+    audioPath: null;
     volume: number;
     balance: number;
-    name: any;
 }
 declare class EventQueue {
     constructor(animState: any);
@@ -1708,16 +1857,14 @@ declare class EventQueue {
 }
 /** Fires an {@link Event} when specific animation times are reached. */
 declare class EventTimeline extends Timeline {
+    static propertyIds: string[];
     constructor(frameCount: any);
+    /** The event for each key frame. */
     events: any[];
     /** Sets the time in seconds and the event for the specified key frame. */
     setFrame(frame: any, event: any): void;
     /** Fires events for frames > `lastTime` and <= `time`. */
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
-}
-declare namespace EventTimeline {
-    let propertyIds_1: string[];
-    export { propertyIds_1 as propertyIds };
 }
 declare class FakeTexture extends Texture {
     setFilters(minFilter: any, magFilter: any): void;
@@ -1726,17 +1873,17 @@ declare class FakeTexture extends Texture {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1749,17 +1896,18 @@ declare class FakeTexture extends Texture {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class GLTexture extends Texture {
+    static DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL: boolean;
     static validateMagFilter(magFilter: any): any;
     static usesMipMaps(filter: any): boolean;
     constructor(context: any, image: any, useMipMaps?: boolean);
-    texture: any;
+    context: ManagedWebGLRenderingContext;
+    texture: null;
     boundUnit: number;
     useMipMaps: boolean;
-    context: ManagedWebGLRenderingContext;
     setFilters(minFilter: any, magFilter: any): void;
     setWraps(uWrap: any, vWrap: any): void;
     update(useMipMaps: any): void;
@@ -1768,22 +1916,19 @@ declare class GLTexture extends Texture {
     unbind(): void;
     dispose(): void;
 }
-declare namespace GLTexture {
-    let DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL: boolean;
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1796,8 +1941,8 @@ declare namespace GLTexture {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for an IK constraint. An IK constraint adjusts the rotation of 1 or 2 constrained bones so the tip of
  * the last bone is as close to the target bone as possible.
@@ -1805,23 +1950,27 @@ declare namespace GLTexture {
  * See [IK constraints](http://esotericsoftware.com/spine-ik-constraints) in the Spine User Guide. */
 declare class IkConstraint {
     constructor(data: any, skeleton: any);
+    /** The IK constraint's setup pose data. */
+    data: any;
+    /** The bones that will be modified by this IK constraint. */
+    bones: any[];
+    /** The bone that is the IK target. */
+    target: any;
     /** Controls the bend direction of the IK bones, either 1 or -1. */
-    bendDirection: any;
+    bendDirection: number;
     /** When true and only a single bone is being constrained, if the target is too close, the bone is scaled to reach it. */
-    compress: any;
+    compress: boolean;
     /** When true, if the target is out of range, the parent bone is scaled to reach it. If more than one bone is being constrained
      * and the parent bone has local nonuniform scale, stretch is not applied. */
-    stretch: any;
+    stretch: boolean;
     /** A percentage (0-1) that controls the mix between the constrained and unconstrained rotations. */
-    mix: any;
+    mix: number;
     /** For two bone IK, the distance from the maximum reach of the bones that rotation will slow. */
-    softness: any;
+    softness: number;
     active: boolean;
-    data: any;
-    bones: any[];
-    target: any;
     isActive(): boolean;
-    update(): void;
+    setToSetupPose(): void;
+    update(physics: any): void;
     /** Applies 1 bone IK. The target is specified in the world coordinate system. */
     apply1(bone: any, targetX: any, targetY: any, compress: any, stretch: any, uniform: any, alpha: any): void;
     /** Applies 2 bone IK. The target is specified in the world coordinate system.
@@ -1830,17 +1979,17 @@ declare class IkConstraint {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1853,19 +2002,20 @@ declare class IkConstraint {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for an {@link IkConstraint}.
  * <p>
  * See [IK constraints](http://esotericsoftware.com/spine-ik-constraints) in the Spine User Guide. */
 declare class IkConstraintData extends ConstraintData {
     constructor(name: any);
-    set target(arg: any);
-    get target(): any;
-    _target: any;
     /** The bones that are constrained by this IK constraint. */
     bones: any[];
+    /** The bone that is the IK target. */
+    _target: null;
+    set target(boneData: never);
+    get target(): never;
     /** Controls the bend direction of the IK bones, either 1 or -1. */
     bendDirection: number;
     /** When true and only a single bone is being constrained, if the target is too close, the bone is scaled to reach it. */
@@ -1884,25 +2034,33 @@ declare class IkConstraintData extends ConstraintData {
 /** Changes an IK constraint's {@link IkConstraint#mix}, {@link IkConstraint#softness},
  * {@link IkConstraint#bendDirection}, {@link IkConstraint#stretch}, and {@link IkConstraint#compress}. */
 declare class IkConstraintTimeline extends CurveTimeline {
-    /** The index of the IK constraint slot in {@link Skeleton#ikConstraints} that will be changed. */
-    ikConstraintIndex: any;
+    /** The index of the IK constraint in {@link Skeleton#getIkConstraints()} that will be changed when this timeline is applied */
+    constraintIndex: number;
     /** Sets the time in seconds, mix, softness, bend direction, compress, and stretch for the specified key frame. */
     setFrame(frame: any, time: any, mix: any, softness: any, bendDirection: any, compress: any, stretch: any): void;
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
 }
+declare class InheritTimeline extends Timeline {
+    boneIndex: number;
+    /** Sets the transform mode for the specified frame.
+     * @param frame Between 0 and <code>frameCount</code>, inclusive.
+     * @param time The frame time in seconds. */
+    setFrame(frame: any, time: any, inherit: any): void;
+    apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
+}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1915,37 +2073,56 @@ declare class IkConstraintTimeline extends CurveTimeline {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Input {
-    constructor(element: any);
+    constructor(element: any, autoPreventDefault?: boolean);
+    element: any;
     mouseX: number;
     mouseY: number;
     buttonDown: boolean;
-    touch0: Touch | null;
-    touch1: Touch | null;
+    touch0: null;
+    touch1: null;
     initialPinchDistance: number;
     listeners: any[];
-    eventListeners: any[];
-    element: any;
-    setupCallbacks(element: any): void;
+    autoPreventDefault: boolean;
+    isTouch: boolean;
+    callbacks: {
+        mouseDown: (ev: any) => void;
+        mouseMove: (ev: any) => void;
+        mouseUp: (ev: any) => void;
+        mouseWheel: (ev: any) => void;
+        touchStart: (ev: any) => void;
+        touchMove: (ev: any) => void;
+        touchEnd: (ev: any) => void;
+    };
+    setupCallbacks(element: any): {
+        mouseDown: (ev: any) => void;
+        mouseMove: (ev: any) => void;
+        mouseUp: (ev: any) => void;
+        mouseWheel: (ev: any) => void;
+        touchStart: (ev: any) => void;
+        touchMove: (ev: any) => void;
+        touchEnd: (ev: any) => void;
+    };
+    dispose(): void;
     addListener(listener: any): void;
     removeListener(listener: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -1958,8 +2135,8 @@ declare class Input {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class IntSet {
     array: any[];
@@ -1973,31 +2150,32 @@ declare class Interpolation {
 }
 declare class LoadingScreen {
     constructor(renderer: any);
-    logo: GLTexture | null;
-    spinner: GLTexture | null;
+    renderer: any;
+    logo: null;
+    spinner: null;
     angle: number;
     fadeOut: number;
     fadeIn: number;
     timeKeeper: TimeKeeper;
     backgroundColor: Color;
     tempColor: Color;
-    renderer: any;
     dispose(): void;
     draw(complete?: boolean): void;
+    drawInCoordinates(x: any, y: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2010,22 +2188,22 @@ declare class LoadingScreen {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2038,43 +2216,48 @@ declare class LoadingScreen {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class ManagedWebGLRenderingContext {
     constructor(canvasOrContext: any, contextConfig?: {
         alpha: string;
     });
-    restorables: any[];
-    gl: any;
     canvas: any;
+    gl: any;
+    restorables: any[];
+    contextLostHandler(e: any): void;
+    contextRestoredHandler(e: any): void;
+    dispose(): void;
     addRestorable(restorable: any): void;
     removeRestorable(restorable: any): void;
 }
 declare class MathUtils {
+    static PI: number;
+    static PI2: number;
+    static invPI2: number;
+    static radiansToDegrees: number;
+    static radDeg: number;
+    static degreesToRadians: number;
+    static degRad: number;
     static clamp(value: any, min: any, max: any): any;
     static cosDeg(degrees: any): number;
     static sinDeg(degrees: any): number;
-    static signum(value: any): 0 | 1 | -1;
+    static atan2Deg(y: any, x: any): number;
+    static signum(value: any): 1 | 0 | -1;
     static toInt(x: any): number;
     static cbrt(x: any): number;
     static randomTriangular(min: any, max: any): any;
     static randomTriangularWith(min: any, max: any, mode: any): any;
     static isPowerOfTwo(value: any): any;
 }
-declare namespace MathUtils {
-    export let PI: number;
-    export let PI2: number;
-    export let radiansToDegrees: number;
-    import radDeg = radiansToDegrees;
-    export { radDeg };
-    export let degreesToRadians: number;
-    import degRad = degreesToRadians;
-    export { degRad };
-}
 declare class Matrix4 {
-    temp: Float32Array;
-    values: Float32Array;
+    static xAxis: Vector3;
+    static yAxis: Vector3;
+    static zAxis: Vector3;
+    static tmpMatrix: Matrix4;
+    temp: Float32Array<ArrayBuffer>;
+    values: Float32Array<ArrayBuffer>;
     set(values: any): this;
     transpose(): this;
     identity(): this;
@@ -2089,25 +2272,19 @@ declare class Matrix4 {
     multiplyLeft(matrix: any): this;
     lookAt(position: any, direction: any, up: any): this;
 }
-declare namespace Matrix4 {
-    let xAxis: Vector3;
-    let yAxis: Vector3;
-    let zAxis: Vector3;
-    let tmpMatrix: Matrix4;
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2120,32 +2297,32 @@ declare namespace Matrix4 {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Mesh {
     constructor(context: any, attributes: any, maxVertices: any, maxIndices: any);
+    attributes: any;
+    context: ManagedWebGLRenderingContext;
+    vertices: Float32Array<ArrayBuffer>;
+    verticesBuffer: null;
+    verticesLength: number;
+    dirtyVertices: boolean;
+    indices: Uint16Array<any>;
+    indicesBuffer: null;
+    indicesLength: number;
+    dirtyIndices: boolean;
+    elementsPerVertex: number;
     getAttributes(): any;
     maxVertices(): number;
     numVertices(): number;
     setVerticesLength(length: any): void;
-    dirtyVertices: boolean;
-    verticesLength: number;
-    getVertices(): Float32Array;
+    getVertices(): Float32Array<ArrayBuffer>;
     maxIndices(): number;
     numIndices(): number;
     setIndicesLength(length: any): void;
-    dirtyIndices: boolean;
-    indicesLength: number;
-    getIndices(): Uint16Array;
+    getIndices(): Uint16Array<any>;
     getVertexSizeInFloats(): number;
-    attributes: any;
-    verticesBuffer: any;
-    indicesBuffer: any;
-    elementsPerVertex: number;
-    context: ManagedWebGLRenderingContext;
-    vertices: Float32Array;
-    indices: Uint16Array;
     setVertices(vertices: any): void;
     setIndices(indices: any): void;
     draw(shader: any, primitiveType: any): void;
@@ -2158,17 +2335,17 @@ declare class Mesh {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2181,8 +2358,8 @@ declare class Mesh {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment that displays a textured mesh. A mesh has hull vertices and internal vertices within the hull. Holes are not
  * supported. Each vertex has UVs (texture coordinates) and triangles are used to map an image on to the mesh.
@@ -2190,7 +2367,9 @@ declare class Mesh {
  * See [Mesh attachments](http://esotericsoftware.com/spine-meshes) in the Spine User Guide. */
 declare class MeshAttachment extends VertexAttachment {
     constructor(name: any, path: any);
-    region: any;
+    region: null;
+    /** The name of the texture region for this attachment. */
+    path: any;
     /** The UV pair for each vertex, normalized within the texture region. */
     regionUVs: any[];
     /** The UV pair for each vertex, normalized within the entire texture.
@@ -2210,17 +2389,16 @@ declare class MeshAttachment extends VertexAttachment {
     /** Vertex index pairs describing edges for controling triangulation. Mesh triangles will never cross edges. Only available if
      * nonessential data was exported. Triangulation is not performed at runtime. */
     edges: any[];
-    parentMesh: any;
-    sequence: any;
+    parentMesh: null;
+    sequence: null;
     tempColor: Color;
-    path: any;
     /** Calculates {@link #uvs} using the {@link #regionUVs} and region. Must be called if the region, the region's properties, or
      * the {@link #regionUVs} are changed. */
     updateRegion(): void;
     /** The parent mesh if this is a linked mesh, else null. A linked mesh shares the {@link #bones}, {@link #vertices},
      * {@link #regionUVs}, {@link #triangles}, {@link #hullLength}, {@link #edges}, {@link #width}, and {@link #height} with the
      * parent mesh, but may have a different {@link #name} or {@link #path} (and therefore a different texture). */
-    getParentMesh(): any;
+    getParentMesh(): null;
     /** @param parentMesh May be null. */
     setParentMesh(parentMesh: any): void;
     copy(): MeshAttachment;
@@ -2230,17 +2408,17 @@ declare class MeshAttachment extends VertexAttachment {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2253,8 +2431,8 @@ declare class MeshAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class OrthoCamera {
     constructor(viewportWidth: any, viewportHeight: any);
@@ -2264,8 +2442,8 @@ declare class OrthoCamera {
     near: number;
     far: number;
     zoom: number;
-    viewportWidth: any;
-    viewportHeight: any;
+    viewportWidth: number;
+    viewportHeight: number;
     projectionView: Matrix4;
     inverseProjectionView: Matrix4;
     projection: Matrix4;
@@ -2277,17 +2455,17 @@ declare class OrthoCamera {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2300,8 +2478,8 @@ declare class OrthoCamera {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment whose vertices make up a composite Bezier curve.
  *
@@ -2321,17 +2499,17 @@ declare class PathAttachment extends VertexAttachment {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2344,22 +2522,32 @@ declare class PathAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for a path constraint. A path constraint adjusts the rotation, translation, and scale of the
  * constrained bones so they follow a {@link PathAttachment}.
  *
  * See [Path constraints](http://esotericsoftware.com/spine-path-constraints) in the Spine User Guide. */
 declare class PathConstraint {
+    static NONE: number;
+    static BEFORE: number;
+    static AFTER: number;
+    static epsilon: number;
     constructor(data: any, skeleton: any);
+    /** The path constraint's setup pose data. */
+    data: any;
+    /** The bones that will be modified by this path constraint. */
+    bones: any[];
+    /** The slot whose path attachment will be used to constrained the bones. */
+    target: any;
     /** The position along the path. */
-    position: any;
+    position: number;
     /** The spacing between bones. */
-    spacing: any;
-    mixRotate: any;
-    mixX: any;
-    mixY: any;
+    spacing: number;
+    mixRotate: number;
+    mixX: number;
+    mixY: number;
     spaces: any[];
     positions: any[];
     world: any[];
@@ -2367,35 +2555,27 @@ declare class PathConstraint {
     lengths: any[];
     segments: any[];
     active: boolean;
-    data: any;
-    bones: any[];
-    target: any;
     isActive(): boolean;
-    update(): void;
+    setToSetupPose(): void;
+    update(physics: any): void;
     computeWorldPositions(path: any, spacesCount: any, tangents: any): any;
     addBeforePosition(p: any, temp: any, i: any, out: any, o: any): void;
     addAfterPosition(p: any, temp: any, i: any, out: any, o: any): void;
     addCurvePosition(p: any, x1: any, y1: any, cx1: any, cy1: any, cx2: any, cy2: any, x2: any, y2: any, out: any, o: any, tangents: any): void;
 }
-declare namespace PathConstraint {
-    let NONE: number;
-    let BEFORE: number;
-    let AFTER: number;
-    let epsilon: number;
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2408,19 +2588,20 @@ declare namespace PathConstraint {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link PathConstraint}.
  *
  * See [path constraints](http://esotericsoftware.com/spine-path-constraints) in the Spine User Guide. */
 declare class PathConstraintData extends ConstraintData {
     constructor(name: any);
-    set target(arg: any);
-    get target(): any;
-    _target: any;
     /** The bones that will be modified by this path constraint. */
     bones: any[];
+    /** The slot whose path attachment will be used to constrained the bones. */
+    _target: null;
+    set target(slotData: never);
+    get target(): never;
     /** The mode for positioning the first bone on the path. */
     positionMode: any;
     /** The mode for positioning the bones after the first bone on the path. */
@@ -2440,36 +2621,118 @@ declare class PathConstraintData extends ConstraintData {
 /** Changes a transform constraint's {@link PathConstraint#getMixRotate()}, {@link PathConstraint#getMixX()}, and
  * {@link PathConstraint#getMixY()}. */
 declare class PathConstraintMixTimeline extends CurveTimeline {
-    /** The index of the path constraint slot in {@link Skeleton#getPathConstraints()} that will be changed. */
-    pathConstraintIndex: any;
+    /** The index of the path constraint in {@link Skeleton#getPathConstraints()} that will be changed when this timeline is
+     * applied. */
+    constraintIndex: number;
     setFrame(frame: any, time: any, mixRotate: any, mixX: any, mixY: any): void;
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a path constraint's {@link PathConstraint#position}. */
 declare class PathConstraintPositionTimeline extends CurveTimeline1 {
-    /** The index of the path constraint slot in {@link Skeleton#pathConstraints} that will be changed. */
-    pathConstraintIndex: any;
+    /** The index of the path constraint in {@link Skeleton#getPathConstraints()} that will be changed when this timeline is
+     * applied. */
+    constraintIndex: number;
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a path constraint's {@link PathConstraint#spacing}. */
 declare class PathConstraintSpacingTimeline extends CurveTimeline1 {
-    /** The index of the path constraint slot in {@link Skeleton#getPathConstraints()} that will be changed. */
-    pathConstraintIndex: any;
+    /** The index of the path constraint in {@link Skeleton#getPathConstraints()} that will be changed when this timeline is
+     * applied. */
+    constraintIndex: number;
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getDamping()}. */
+declare class PhysicsConstraintDampingTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): any;
+    get(constraint: any): any;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getGravity()}. */
+declare class PhysicsConstraintGravityTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): any;
+    get(constraint: any): any;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getInertia()}. */
+declare class PhysicsConstraintInertiaTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): any;
+    get(constraint: any): any;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getMassInverse()}. The timeline values are not inverted. */
+declare class PhysicsConstraintMassTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): number;
+    get(constraint: any): number;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getMix()}. */
+declare class PhysicsConstraintMixTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): any;
+    get(constraint: any): any;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
+}
+/** Resets a physics constraint when specific animation times are reached. */
+declare class PhysicsConstraintResetTimeline extends Timeline {
+    static propertyIds: string[];
+    /** @param physicsConstraintIndex -1 for all physics constraints in the skeleton. */
+    constructor(frameCount: any, physicsConstraintIndex: any);
+    /** The index of the physics constraint in {@link Skeleton#getPhysicsConstraints()} that will be reset when this timeline is
+    * applied, or -1 if all physics constraints in the skeleton will be reset. */
+    constraintIndex: any;
+    /** Sets the time for the specified frame.
+     * @param frame Between 0 and <code>frameCount</code>, inclusive. */
+    setFrame(frame: any, time: any): void;
+    /** Resets the physics constraint when frames > <code>lastTime</code> and <= <code>time</code>. */
+    apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getStrength()}. */
+declare class PhysicsConstraintStrengthTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): any;
+    get(constraint: any): any;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
+}
+/** The base class for most {@link PhysicsConstraint} timelines. */
+declare class PhysicsConstraintTimeline extends CurveTimeline1 {
+    /** @param physicsConstraintIndex -1 for all physics constraints in the skeleton. */
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any, property: any);
+    /** The index of the physics constraint in {@link Skeleton#getPhysicsConstraints()} that will be changed when this timeline
+     * is applied, or -1 if all physics constraints in the skeleton will be changed. */
+    constraintIndex: number;
+    apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getWind()}. */
+declare class PhysicsConstraintWindTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount: any, bezierCount: any, physicsConstraintIndex: any);
+    setup(constraint: any): any;
+    get(constraint: any): any;
+    set(constraint: any, value: any): void;
+    global(constraint: any): any;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2482,8 +2745,8 @@ declare class PathConstraintSpacingTimeline extends CurveTimeline1 {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment which is a single point and a rotation. This can be used to spawn projectiles, particles, etc. A bone can be
  * used in similar ways, but a PointAttachment is slightly less expensive to compute and can be hidden, shown, and placed in a
@@ -2502,20 +2765,28 @@ declare class PointAttachment extends VertexAttachment {
     copy(): PointAttachment;
 }
 declare class PolygonBatcher {
+    static disableCulling: boolean;
+    static globalDrawCalls: number;
+    static blendModesGL: {
+        srcRgb: number;
+        srcRgbPma: number;
+        dstRgb: number;
+        srcAlpha: number;
+    }[];
     static getAndResetGlobalDrawCalls(): number;
     constructor(context: any, twoColorTint?: boolean, maxVertices?: number);
+    context: ManagedWebGLRenderingContext;
     drawCalls: number;
     isDrawing: boolean;
-    shader: any;
-    lastTexture: any;
+    mesh: Mesh;
+    shader: null;
+    lastTexture: null;
     verticesLength: number;
     indicesLength: number;
-    cullWasEnabled: boolean;
-    context: ManagedWebGLRenderingContext;
-    mesh: Mesh;
     srcColorBlend: any;
     srcAlphaBlend: any;
     dstBlend: any;
+    cullWasEnabled: boolean;
     begin(shader: any): void;
     setBlendMode(blendMode: any, premultipliedAlpha: any): void;
     draw(texture: any, vertices: any, indices: any): void;
@@ -2523,16 +2794,6 @@ declare class PolygonBatcher {
     end(): void;
     getDrawCalls(): number;
     dispose(): void;
-}
-declare namespace PolygonBatcher {
-    let disableCulling: boolean;
-    let globalDrawCalls: number;
-    let blendModesGL: {
-        srcRgb: number;
-        srcRgbPma: number;
-        dstRgb: number;
-        srcAlpha: number;
-    }[];
 }
 declare class Pool {
     constructor(instantiator: any);
@@ -2551,52 +2812,52 @@ declare class Position3Attribute extends VertexAttribute {
 }
 declare class Pow extends Interpolation {
     constructor(power: any);
-    power: any;
+    power: number;
     applyInternal(a: any): number;
 }
 declare class PowOut extends Pow {
 }
 /** Changes a slot's {@link Slot#color} and {@link Slot#darkColor} for two color tinting. */
 declare class RGB2Timeline extends CurveTimeline {
-    slotIndex: any;
+    slotIndex: number;
     /** Sets the time in seconds, light, and dark colors for the specified key frame. */
     setFrame(frame: any, time: any, r: any, g: any, b: any, r2: any, g2: any, b2: any): void;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a slot's {@link Slot#color} and {@link Slot#darkColor} for two color tinting. */
 declare class RGBA2Timeline extends CurveTimeline {
-    slotIndex: any;
+    slotIndex: number;
     /** Sets the time in seconds, light, and dark colors for the specified key frame. */
     setFrame(frame: any, time: any, r: any, g: any, b: any, a: any, r2: any, g2: any, b2: any): void;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a slot's {@link Slot#color}. */
 declare class RGBATimeline extends CurveTimeline {
-    slotIndex: any;
+    slotIndex: number;
     /** Sets the time in seconds, red, green, blue, and alpha for the specified key frame. */
     setFrame(frame: any, time: any, r: any, g: any, b: any, a: any): void;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a slot's {@link Slot#color}. */
 declare class RGBTimeline extends CurveTimeline {
-    slotIndex: any;
+    slotIndex: number;
     /** Sets the time in seconds, red, green, blue, and alpha for the specified key frame. */
     setFrame(frame: any, time: any, r: any, g: any, b: any): void;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2609,13 +2870,45 @@ declare class RGBTimeline extends CurveTimeline {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment that displays a textured quadrilateral.
  *
  * See [Region attachments](http://esotericsoftware.com/spine-regions) in the Spine User Guide. */
 declare class RegionAttachment extends Attachment {
+    static X1: number;
+    static Y1: number;
+    static C1R: number;
+    static C1G: number;
+    static C1B: number;
+    static C1A: number;
+    static U1: number;
+    static V1: number;
+    static X2: number;
+    static Y2: number;
+    static C2R: number;
+    static C2G: number;
+    static C2B: number;
+    static C2A: number;
+    static U2: number;
+    static V2: number;
+    static X3: number;
+    static Y3: number;
+    static C3R: number;
+    static C3G: number;
+    static C3B: number;
+    static C3A: number;
+    static U3: number;
+    static V3: number;
+    static X4: number;
+    static Y4: number;
+    static C4R: number;
+    static C4G: number;
+    static C4B: number;
+    static C4A: number;
+    static U4: number;
+    static V4: number;
     constructor(name: any, path: any);
     /** The local x translation. */
     x: number;
@@ -2633,15 +2926,16 @@ declare class RegionAttachment extends Attachment {
     height: number;
     /** The color to tint the region attachment. */
     color: Color;
-    region: any;
-    sequence: any;
+    /** The name of the texture region for this attachment. */
+    path: any;
+    region: null;
+    sequence: null;
     /** For each of the 4 vertices, a pair of <code>x,y</code> values that is the local position of the vertex.
      *
      * See {@link #updateOffset()}. */
-    offset: any[] | Float32Array;
-    uvs: any[] | Float32Array;
+    offset: any[] | Float32Array<any>;
+    uvs: any[] | Float32Array<any>;
     tempColor: Color;
-    path: any;
     /** Calculates the {@link #offset} using the region settings. Must be called after changing region settings. */
     updateRegion(): void;
     /** Transforms the attachment's four vertices to world coordinates. If the attachment has a {@link #sequence}, the region may
@@ -2655,76 +2949,43 @@ declare class RegionAttachment extends Attachment {
     computeWorldVertices(slot: any, worldVertices: any, offset: any, stride: any): void;
     copy(): RegionAttachment;
 }
-declare namespace RegionAttachment {
-    let X1: number;
-    let Y1: number;
-    let C1R: number;
-    let C1G: number;
-    let C1B: number;
-    let C1A: number;
-    let U1: number;
-    let V1: number;
-    let X2: number;
-    let Y2: number;
-    let C2R: number;
-    let C2G: number;
-    let C2B: number;
-    let C2A: number;
-    let U2: number;
-    let V2: number;
-    let X3: number;
-    let Y3: number;
-    let C3R: number;
-    let C3G: number;
-    let C3B: number;
-    let C3A: number;
-    let U3: number;
-    let V3: number;
-    let X4: number;
-    let Y4: number;
-    let C4R: number;
-    let C4G: number;
-    let C4B: number;
-    let C4A: number;
-    let U4: number;
-    let V4: number;
-}
 /** Changes a bone's local {@link Bone#rotation}. */
 declare class RotateTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#scaleX)} and {@link Bone#scaleY}. */
 declare class ScaleTimeline extends CurveTimeline2 {
     constructor(frameCount: any, bezierCount: any, boneIndex: any);
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#scaleX)} and {@link Bone#scaleY}. */
 declare class ScaleXTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#scaleX)} and {@link Bone#scaleY}. */
 declare class ScaleYTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 declare class SceneRenderer {
     constructor(canvas: any, context: any, twoColorTint?: boolean);
-    twoColorTint: boolean;
-    activeRenderer: PolygonBatcher | ShapeRenderer | SkeletonDebugRenderer | null;
-    canvas: any;
     context: ManagedWebGLRenderingContext;
+    canvas: any;
     camera: OrthoCamera;
-    batcherShader: Shader;
     batcher: PolygonBatcher;
-    shapesShader: Shader;
+    twoColorTint: boolean;
+    batcherShader: Shader;
     shapes: ShapeRenderer;
+    shapesShader: Shader;
+    activeRenderer: null;
     skeletonRenderer: {
         premultipliedAlpha: boolean;
         tempColor: Color;
         tempColor2: Color;
+        vertices: any[] | Float32Array<any>;
         vertexSize: number;
         twoColorTint: boolean;
         renderable: Renderable;
@@ -2733,8 +2994,9 @@ declare class SceneRenderer {
         temp2: Vector2;
         temp3: Color;
         temp4: Color;
-        vertices: any[] | Float32Array;
         draw(batcher: any, skeleton: any, slotRangeStart?: number, slotRangeEnd?: number, transformer?: null): void;
+        /** Returns the {@link SkeletonClipping} used by this renderer for use with e.g. {@link Skeleton.getBounds} **/
+        getSkeletonClipping(): SkeletonClipping;
     };
     skeletonDebugRenderer: SkeletonDebugRenderer;
     dispose(): void;
@@ -2759,6 +3021,9 @@ declare class SceneRenderer {
 }
 /** Changes a slot's {@link Slot#getSequenceIndex()} for an attachment's {@link Sequence}. */
 declare class SequenceTimeline extends Timeline {
+    static ENTRIES: number;
+    static MODE: number;
+    static DELAY: number;
     constructor(frameCount: any, slotIndex: any, attachment: any);
     slotIndex: any;
     attachment: any;
@@ -2770,24 +3035,19 @@ declare class SequenceTimeline extends Timeline {
     setFrame(frame: any, time: any, mode: any, index: any, delay: any): void;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
-declare namespace SequenceTimeline {
-    let ENTRIES: number;
-    let MODE: number;
-    let DELAY: number;
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2800,30 +3060,36 @@ declare namespace SequenceTimeline {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Shader {
+    static MVP_MATRIX: string;
+    static POSITION: string;
+    static COLOR: string;
+    static COLOR2: string;
+    static TEXCOORDS: string;
+    static SAMPLER: string;
     static newColoredTextured(context: any): Shader;
     static newTwoColoredTextured(context: any): Shader;
     static newColored(context: any): Shader;
     constructor(context: any, vertexShader: any, fragmentShader: any);
-    getProgram(): any;
+    vertexShader: any;
+    fragmentShader: any;
+    context: ManagedWebGLRenderingContext;
+    vs: null;
+    vsSource: any;
+    fs: null;
+    fsSource: any;
+    program: null;
+    tmp2x2: Float32Array<ArrayBuffer>;
+    tmp3x3: Float32Array<ArrayBuffer>;
+    tmp4x4: Float32Array<ArrayBuffer>;
+    getProgram(): null;
     getVertexShader(): any;
     getFragmentShader(): any;
     getVertexShaderSource(): any;
     getFragmentSource(): any;
-    vertexShader: any;
-    fragmentShader: any;
-    vs: any;
-    fs: any;
-    program: any;
-    tmp2x2: Float32Array;
-    tmp3x3: Float32Array;
-    tmp4x4: Float32Array;
-    vsSource: any;
-    fsSource: any;
-    context: ManagedWebGLRenderingContext;
     compile(): void;
     compileShader(type: any, source: any): any;
     compileProgram(vs: any, fs: any): any;
@@ -2842,27 +3108,19 @@ declare class Shader {
     getAttributeLocation(attribute: any): any;
     dispose(): void;
 }
-declare namespace Shader {
-    let MVP_MATRIX: string;
-    let POSITION: string;
-    let COLOR: string;
-    let COLOR2: string;
-    let TEXCOORDS: string;
-    let SAMPLER: string;
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2875,19 +3133,19 @@ declare namespace Shader {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class ShapeRenderer {
     constructor(context: any, maxVertices?: number);
+    context: ManagedWebGLRenderingContext;
     isDrawing: boolean;
+    mesh: Mesh;
     shapeType: any;
     color: Color;
-    shader: any;
+    shader: null;
     vertexIndex: number;
     tmp: Vector2;
-    context: ManagedWebGLRenderingContext;
-    mesh: Mesh;
     srcColorBlend: any;
     srcAlphaBlend: any;
     dstBlend: any;
@@ -2914,32 +3172,32 @@ declare class ShapeRenderer {
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 declare class ShearTimeline extends CurveTimeline2 {
     constructor(frameCount: any, bezierCount: any, boneIndex: any);
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 declare class ShearXTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 declare class ShearYTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2952,36 +3210,54 @@ declare class ShearYTimeline extends CurveTimeline1 {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for a skeleton.
  *
  * See [Instance objects](http://esotericsoftware.com/spine-runtime-architecture#Instance-objects) in the Spine Runtimes Guide. */
 declare class Skeleton {
+    static quadTriangles: number[];
+    static yDown: boolean;
     constructor(data: any);
-    set scaleY(arg: number);
-    get scaleY(): number;
-    _scaleY: number;
+    /** The skeleton's setup pose data. */
+    data: any;
+    /** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
+    bones: any[];
+    /** The skeleton's slots in the setup pose draw order. */
+    slots: any[];
+    /** The skeleton's slots in the order they should be drawn. The returned array may be modified to change the draw order. */
+    drawOrder: any[];
+    /** The skeleton's IK constraints. */
+    ikConstraints: any[];
+    /** The skeleton's transform constraints. */
+    transformConstraints: any[];
+    /** The skeleton's path constraints. */
+    pathConstraints: any[];
+    /** The skeleton's physics constraints. */
+    physicsConstraints: any[];
     /** The list of bones and constraints, sorted in the order they should be updated, as computed by {@link #updateCache()}. */
     _updateCache: any[];
     /** The skeleton's current skin. May be null. */
-    skin: any;
+    skin: null;
+    /** The color to tint all the skeleton's attachments. */
+    color: Color;
     /** Scales the entire skeleton on the X axis. This affects all bones, even if the bone's transform mode disallows scale
       * inheritance. */
     scaleX: number;
+    /** Scales the entire skeleton on the Y axis. This affects all bones, even if the bone's transform mode disallows scale
+      * inheritance. */
+    _scaleY: number;
+    set scaleY(scaleY: number);
+    get scaleY(): number;
     /** Sets the skeleton X position, which is added to the root bone worldX position. */
     x: number;
     /** Sets the skeleton Y position, which is added to the root bone worldY position. */
     y: number;
-    data: any;
-    bones: any[];
-    slots: any[];
-    drawOrder: any[];
-    ikConstraints: any[];
-    transformConstraints: any[];
-    pathConstraints: any[];
-    color: Color;
+    /** Returns the skeleton's time. This is used for time-based manipulations, such as {@link PhysicsConstraint}.
+     * <p>
+     * See {@link #update(float)}. */
+    time: number;
     /** Caches information about bones and constraints. Must be called if the {@link #getSkin()} is modified or if bones,
      * constraints, or weighted path attachments are added or removed. */
     updateCache(): void;
@@ -2990,14 +3266,15 @@ declare class Skeleton {
     sortTransformConstraint(constraint: any): void;
     sortPathConstraintAttachment(skin: any, slotIndex: any, slotBone: any): void;
     sortPathConstraintAttachmentWith(attachment: any, slotBone: any): void;
+    sortPhysicsConstraint(constraint: any): void;
     sortBone(bone: any): void;
     sortReset(bones: any): void;
     /** Updates the world transform for each bone and applies all constraints.
      *
      * See [World transforms](http://esotericsoftware.com/spine-runtime-skeletons#World-transforms) in the Spine
      * Runtimes Guide. */
-    updateWorldTransform(): void;
-    updateWorldTransformWith(parent: any): void;
+    updateWorldTransform(physics: any): void;
+    updateWorldTransformWith(physics: any, parent: any): void;
     /** Sets the bones, constraints, and slots to their setup pose values. */
     setToSetupPose(): void;
     /** Sets the bones and constraints to their setup pose values. */
@@ -3055,9 +3332,12 @@ declare class Skeleton {
      * than to call it repeatedly.
      * @return May be null. */
     findPathConstraint(constraintName: any): any;
+    /** Finds a physics constraint by comparing each physics constraint's name. It is more efficient to cache the results of this
+     * method than to call it repeatedly. */
+    findPhysicsConstraint(constraintName: any): any;
     /** Returns the axis aligned bounding box (AABB) of the region and mesh attachments for the current pose as `{ x: number, y: number, width: number, height: number }`.
      * Note that this method will create temporary objects which can add to garbage collection pressure. Use `getBounds()` if garbage collection is a concern. */
-    getBoundsRect(): {
+    getBoundsRect(clipper: any): {
         x: number;
         y: number;
         width: number;
@@ -3066,25 +3346,28 @@ declare class Skeleton {
     /** Returns the axis aligned bounding box (AABB) of the region and mesh attachments for the current pose.
      * @param offset An output value, the distance from the skeleton origin to the bottom left corner of the AABB.
      * @param size An output value, the width and height of the AABB.
-     * @param temp Working memory to temporarily store attachments' computed world vertices. */
-    getBounds(offset: any, size: any, temp?: any[]): void;
-}
-declare namespace Skeleton {
-    let yDown: boolean;
+     * @param temp Working memory to temporarily store attachments' computed world vertices.
+     * @param clipper {@link SkeletonClipping} to use. If <code>null</code>, no clipping is applied. */
+    getBounds(offset: any, size: any, temp?: any[], clipper?: null): void;
+    /** Increments the skeleton's {@link #time}. */
+    update(delta: any): void;
+    physicsTranslate(x: any, y: any): void;
+    /** Calls {@link PhysicsConstraint#rotate(float, float, float)} for each physics constraint. */
+    physicsRotate(x: any, y: any, degrees: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3097,8 +3380,8 @@ declare namespace Skeleton {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Loads skeleton data in the Spine binary format.
  *
@@ -3112,30 +3395,30 @@ declare class SkeletonBinary {
      *
      * See [Scaling](http://esotericsoftware.com/spine-loading-skeleton-data#Scaling) in the Spine Runtimes Guide. */
     scale: number;
-    linkedMeshes: any[];
     attachmentLoader: any;
+    linkedMeshes: any[];
     readSkeletonData(binary: any): SkeletonData;
     readSkin(input: any, skeletonData: any, defaultSkin: any, nonessential: any): Skin | null;
     readAttachment(input: any, skeletonData: any, skin: any, slotIndex: any, attachmentName: any, nonessential: any): any;
-    readSequence(input: any): Sequence | null;
-    readVertices(input: any, vertexCount: any): Vertices;
+    readSequence(input: any): Sequence;
+    readVertices(input: any, weighted: any): Vertices;
     readFloatArray(input: any, n: any, scale: any): any[];
-    readShortArray(input: any): any[];
+    readShortArray(input: any, n: any): any[];
     readAnimation(input: any, name: any, skeletonData: any): Animation;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3148,8 +3431,8 @@ declare class SkeletonBinary {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Collects each visible {@link BoundingBoxAttachment} and computes the world vertices for its polygon. The polygon vertices are
  * provided along with convenience methods for doing hit detection. */
@@ -3199,17 +3482,17 @@ declare class SkeletonBounds {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3222,8 +3505,8 @@ declare class SkeletonBounds {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class SkeletonClipping {
     static makeClockwise(polygon: any): void;
@@ -3231,32 +3514,36 @@ declare class SkeletonClipping {
     clippingPolygon: any[];
     clipOutput: any[];
     clippedVertices: any[];
+    clippedUVs: any[];
     clippedTriangles: any[];
     scratch: any[];
-    clipAttachment: any;
-    clippingPolygons: any[] | null;
+    clipAttachment: null;
+    clippingPolygons: null;
     clipStart(slot: any, clip: any): number;
     clipEndWithSlot(slot: any): void;
     clipEnd(): void;
     isClipping(): boolean;
-    clipTriangles(vertices: any, verticesLength: any, triangles: any, trianglesLength: any, uvs: any, light: any, dark: any, twoColor: any): void;
+    clipTriangles(vertices: any, verticesLengthOrTriangles: any, trianglesOrTrianglesLength: any, trianglesLengthOrUvs: any, uvsOrLight: any, lightOrDark: any, darkOrTwoColor: any, twoColorParam: any): void;
+    clipTrianglesNoRender(vertices: any, triangles: any, trianglesLength: any): void;
+    clipTrianglesRender(vertices: any, triangles: any, trianglesLength: any, uvs: any, light: any, dark: any, twoColor: any): void;
+    clipTrianglesUnpacked(vertices: any, triangles: any, trianglesLength: any, uvs: any): void;
     /** Clips the input triangle against the convex, clockwise clipping area. If the triangle lies entirely within the clipping
      * area, false is returned. The clipping area must duplicate the first vertex at the end of the vertices list. */
     clip(x1: any, y1: any, x2: any, y2: any, x3: any, y3: any, clippingArea: any, output: any): boolean;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3269,8 +3556,8 @@ declare class SkeletonClipping {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose and all of the stateless data for a skeleton.
  *
@@ -3278,17 +3565,17 @@ declare class SkeletonClipping {
  * Guide. */
 declare class SkeletonData {
     /** The skeleton's name, which by default is the name of the skeleton data file, if possible. May be null. */
-    name: any;
+    name: null;
     /** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
     bones: any[];
-    /** The skeleton's slots. */
+    /** The skeleton's slots in the setup pose draw order. */
     slots: any[];
     skins: any[];
     /** The skeleton's default skin. By default this skin contains all attachments that were not in a skin in Spine.
      *
      * See {@link Skeleton#getAttachmentByName()}.
      * May be null. */
-    defaultSkin: any;
+    defaultSkin: null;
     /** The skeleton's events. */
     events: any[];
     /** The skeleton's animations. */
@@ -3299,6 +3586,8 @@ declare class SkeletonData {
     transformConstraints: any[];
     /** The skeleton's path constraints. */
     pathConstraints: any[];
+    /** The skeleton's physics constraints. */
+    physicsConstraints: any[];
     /** The X coordinate of the skeleton's axis aligned bounding box in the setup pose. */
     x: number;
     /** The Y coordinate of the skeleton's axis aligned bounding box in the setup pose. */
@@ -3307,16 +3596,19 @@ declare class SkeletonData {
     width: number;
     /** The height of the skeleton's axis aligned bounding box in the setup pose. */
     height: number;
+    /** Baseline scale factor for applying distance-dependent effects on non-scalable properties, such as angle or scale. Default
+     * is 100. */
+    referenceScale: number;
     /** The Spine version used to export the skeleton data, or null. */
-    version: any;
+    version: null;
     /** The skeleton data hash. This value will change if any of the skeleton data has changed. May be null. */
-    hash: any;
+    hash: null;
     /** The dopesheet FPS in Spine. Available only when nonessential data was exported. */
     fps: number;
     /** The path to the images directory as defined in Spine. Available only when nonessential data was exported. May be null. */
-    imagesPath: any;
+    imagesPath: null;
     /** The path to the audio directory as defined in Spine. Available only when nonessential data was exported. May be null. */
-    audioPath: any;
+    audioPath: null;
     /** Finds a bone by comparing each bone's name. It is more efficient to cache the results of this method than to call it
      * multiple times.
      * @returns May be null. */
@@ -3349,20 +3641,24 @@ declare class SkeletonData {
      * than to call it multiple times.
      * @return May be null. */
     findPathConstraint(constraintName: any): any;
+    /** Finds a physics constraint by comparing each physics constraint's name. It is more efficient to cache the results of this method
+     * than to call it multiple times.
+     * @return May be null. */
+    findPhysicsConstraint(constraintName: any): any;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3375,10 +3671,12 @@ declare class SkeletonData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class SkeletonDebugRenderer {
+    static LIGHT_GRAY: Color;
+    static GREEN: Color;
     constructor(context: any);
     boneLineColor: Color;
     boneOriginColor: Color;
@@ -3398,31 +3696,26 @@ declare class SkeletonDebugRenderer {
     premultipliedAlpha: boolean;
     scale: number;
     boneWidth: number;
+    context: ManagedWebGLRenderingContext;
     bounds: SkeletonBounds;
     temp: any[];
-    vertices: any[] | Float32Array;
-    context: ManagedWebGLRenderingContext;
+    vertices: any[] | Float32Array<any>;
     draw(shapes: any, skeleton: any, ignoredBones: any): void;
     dispose(): void;
 }
-declare namespace SkeletonDebugRenderer {
-    export let LIGHT_GRAY: Color;
-    let GREEN_1: Color;
-    export { GREEN_1 as GREEN };
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3435,8 +3728,8 @@ declare namespace SkeletonDebugRenderer {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Loads skeleton data in the Spine JSON format.
  *
@@ -3445,13 +3738,13 @@ declare namespace SkeletonDebugRenderer {
  * Runtimes Guide. */
 declare class SkeletonJson {
     constructor(attachmentLoader: any);
+    attachmentLoader: any;
     /** Scales bone positions, image sizes, and translations as they are loaded. This allows different size images to be used at
      * runtime than were used in Spine.
      *
      * See [Scaling](http://esotericsoftware.com/spine-loading-skeleton-data#Scaling) in the Spine Runtimes Guide. */
     scale: number;
     linkedMeshes: any[];
-    attachmentLoader: any;
     readSkeletonData(json: any): SkeletonData;
     readAttachment(map: any, skin: any, slotIndex: any, name: any, skeletonData: any): any;
     readSequence(map: any): Sequence | null;
@@ -3472,10 +3765,13 @@ declare class Vector2 {
  * [Runtime skins](http://esotericsoftware.com/spine-runtime-skins) in the Spine Runtimes Guide. */
 declare class Skin {
     constructor(name: any);
+    /** The skin's name, which is unique across all skins in the skeleton. */
+    name: any;
     attachments: any[];
     bones: any[];
     constraints: any[];
-    name: any;
+    /** The color of the skin as it was in Spine, or a default color if nonessential data was not exported. */
+    color: Color;
     /** Adds an attachment to the skin for the specified slot index and name. */
     setAttachment(slotIndex: any, name: any, attachment: any): void;
     /** Adds all attachments, bones, and constraints from the specified skin to this skin. */
@@ -3498,17 +3794,17 @@ declare class Skin {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3521,8 +3817,8 @@ declare class Skin {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores an entry in the skin consisting of the slot index, name, and attachment **/
 declare class SkinEntry {
@@ -3533,17 +3829,17 @@ declare class SkinEntry {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3556,18 +3852,25 @@ declare class SkinEntry {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores a slot's current pose. Slots organize attachments for {@link Skeleton#drawOrder} purposes and provide a place to store
  * state for an attachment. State cannot be stored in an attachment itself because attachments are stateless and may be shared
  * across multiple skeletons. */
 declare class Slot {
     constructor(data: any, bone: any);
+    /** The slot's setup pose data. */
+    data: any;
+    /** The bone this slot belongs to. */
+    bone: any;
+    /** The color used to tint the slot's attachment. If {@link #getDarkColor()} is set, this is used as the light color for two
+     * color tinting. */
+    color: Color;
     /** The dark color used to tint the slot's attachment for two color tinting, or null if two color tinting is not used. The dark
      * color's alpha is not used. */
-    darkColor: Color | null;
-    attachment: any;
+    darkColor: null;
+    attachment: null;
     attachmentState: number;
     /** The index of the texture region to display when the slot's attachment has a {@link Sequence}. -1 represents the
      * {@link Sequence#getSetupIndex()}. */
@@ -3577,13 +3880,10 @@ declare class Slot {
      *
      * See {@link VertexAttachment#computeWorldVertices()} and {@link DeformTimeline}. */
     deform: any[];
-    data: any;
-    bone: any;
-    color: Color;
     /** The skeleton this slot belongs to. */
     getSkeleton(): any;
     /** The current attachment for the slot, or null if the slot has no attachment. */
-    getAttachment(): any;
+    getAttachment(): null;
     /** Sets the slot's attachment and, if the attachment changed, resets {@link #sequenceIndex} and clears the {@link #deform}.
      * The deform is not cleared if the old attachment has the same {@link VertexAttachment#getTimelineAttachment()} as the
      * specified attachment. */
@@ -3593,17 +3893,17 @@ declare class Slot {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3616,40 +3916,44 @@ declare class Slot {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link Slot}. */
 declare class SlotData {
     constructor(index: any, name: any, boneData: any);
     /** The index of the slot in {@link Skeleton#getSlots()}. */
-    index: any;
+    index: number;
+    /** The name of the slot, which is unique across all slots in the skeleton. */
+    name: any;
+    /** The bone this slot belongs to. */
+    boneData: any;
     /** The color used to tint the slot's attachment. If {@link #getDarkColor()} is set, this is used as the light color for two
      * color tinting. */
     color: Color;
     /** The dark color used to tint the slot's attachment for two color tinting, or null if two color tinting is not used. The dark
      * color's alpha is not used. */
-    darkColor: any;
+    darkColor: null;
     /** The name of the attachment that is visible for this slot in the setup pose, or null if no attachment is visible. */
-    attachmentName: any;
+    attachmentName: null;
     /** The blend mode for drawing the slot's attachment. */
     blendMode: any;
-    name: any;
-    boneData: any;
+    /** False if the slot was hidden in Spine and nonessential data was exported. Does not affect runtime rendering. */
+    visible: boolean;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3662,8 +3966,8 @@ declare class SlotData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Manages the life-cycle and WebGL context of a {@link SpineCanvasApp}. The app loads
  * assets and initializes itself, then updates and renders its state at the screen refresh rate. */
@@ -3671,21 +3975,24 @@ declare class SpineCanvas {
     /** Constructs a new spine canvas, rendering to the provided HTML canvas. */
     constructor(canvas: any, config: any);
     config: any;
+    context: ManagedWebGLRenderingContext;
     /** Tracks the current time, delta, and other time related statistics. */
     time: TimeKeeper;
-    disposed: boolean;
+    /** The HTML canvas to render to. */
     htmlCanvas: any;
-    context: ManagedWebGLRenderingContext;
-    renderer: SceneRenderer;
+    /** The WebGL rendering context. */
     gl: any;
+    /** The scene renderer for easy drawing of skeletons, shapes, and images. */
+    renderer: SceneRenderer;
+    /** The asset manager to load assets with. */
     assetManager: {
         pathPrefix: string;
-        assets: {};
+        textureLoader: any;
+        downloader: Downloader;
+        cache: AssetCache;
         errors: {};
         toLoad: number;
         loaded: number;
-        textureLoader: any;
-        downloader: Downloader;
         start(path: any): string;
         success(callback: any, path: any, asset: any): void;
         error(callback: any, path: any, message: any): void;
@@ -3694,8 +4001,16 @@ declare class SpineCanvas {
         loadBinary(path: any, success?: () => void, error?: () => void): void;
         loadText(path: any, success?: () => void, error?: () => void): void;
         loadJson(path: any, success?: () => void, error?: () => void): void;
+        reuseAssets(path: any, success?: () => void, error?: () => void): boolean;
         loadTexture(path: any, success?: () => void, error?: () => void): void;
-        loadTextureAtlas(path: any, success: (() => void) | undefined, error: (() => void) | undefined, fileAlias: any): void;
+        loadTextureAtlas(path: any, success: () => void, error: () => void, fileAlias: any): void;
+        loadTextureAtlasButNoTextures(path: any, success: () => void, error: () => void, fileAlias: any): void;
+        loadBinaryAsync(path: any): Promise<any>;
+        loadJsonAsync(path: any): Promise<any>;
+        loadTextureAsync(path: any): Promise<any>;
+        loadTextureAtlasAsync(path: any): Promise<any>;
+        loadTextureAtlasButNoTexturesAsync(path: any): Promise<any>;
+        setCache(cache: any): void;
         get(path: any): any;
         require(path: any): any;
         remove(path: any): any;
@@ -3704,10 +4019,13 @@ declare class SpineCanvas {
         getToLoad(): number;
         getLoaded(): number;
         dispose(): void;
+        disposeAsset(path: any): void;
         hasErrors(): boolean;
         getErrors(): {};
     };
+    /** The input processor used to listen to mouse, touch, and keyboard events. */
     input: Input;
+    disposed: boolean;
     /** Clears the canvas with the given color. The color values are given in the range [0,1]. */
     clear(r: any, g: any, b: any, a: any): void;
     /** Disposes the app, so the update() and render() functions are no longer called. Calls the dispose() callback.*/
@@ -3726,17 +4044,17 @@ declare class TexCoordAttribute extends VertexAttribute {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3749,8 +4067,8 @@ declare class TexCoordAttribute extends VertexAttribute {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Texture {
     constructor(image: any);
@@ -3759,17 +4077,17 @@ declare class Texture {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3782,8 +4100,8 @@ declare class Texture {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class TextureAtlas {
     constructor(atlasText: any);
@@ -3795,29 +4113,30 @@ declare class TextureAtlas {
 }
 declare class TextureAtlasPage {
     constructor(name: any);
+    name: any;
     minFilter: any;
     magFilter: any;
     uWrap: any;
     vWrap: any;
-    texture: any;
+    texture: null;
     width: number;
     height: number;
     pma: boolean;
     regions: any[];
-    name: any;
     setTexture(texture: any): void;
 }
 declare class TextureAtlasRegion extends TextureRegion {
     constructor(page: any, name: any);
+    page: any;
+    name: any;
     x: number;
     y: number;
     index: number;
-    names: any;
-    values: any;
-    page: any;
-    name: any;
+    names: null;
+    values: null;
 }
 declare class TextureRegion {
+    texture: any;
     u: number;
     v: number;
     u2: number;
@@ -3846,7 +4165,7 @@ declare class Timeline {
     static search(frames: any, time: any, step: any): number;
     constructor(frameCount: any, propertyIds: any);
     propertyIds: any;
-    frames: any[] | Float32Array;
+    frames: any[] | Float32Array<any>;
     getPropertyIds(): any;
     getFrameEntries(): number;
     getFrameCount(): number;
@@ -3863,21 +4182,21 @@ declare class Touch {
  * References to a track entry must not be kept after the {@link AnimationStateListener#dispose()} event occurs. */
 declare class TrackEntry {
     /** The animation to apply for this track entry. */
-    animation: any;
-    previous: any;
+    animation: null;
+    previous: null;
     /** The animation queued to start after this animation, or null. `next` makes up a linked list. */
-    next: any;
+    next: null;
     /** The track entry for the previous animation when mixing from the previous animation to this animation, or null if no
      * mixing is currently occuring. When mixing from multiple animations, `mixingFrom` makes up a linked list. */
-    mixingFrom: any;
+    mixingFrom: null;
     /** The track entry for the next animation when mixing from this animation to the next animation, or null if no mixing is
      * currently occuring. When mixing to multiple animations, `mixingTo` makes up a linked list. */
-    mixingTo: any;
+    mixingTo: null;
     /** The listener for events generated by this track entry, or null.
      *
      * A track entry returned from {@link AnimationState#setAnimation()} is already the current animation
      * for the track, so the track entry listener {@link AnimationStateListener#start()} will not be called. */
-    listener: any;
+    listener: null;
     /** The index of the track where this track entry is either current or queued.
      *
      * See {@link AnimationState#getCurrent()}. */
@@ -3906,11 +4225,14 @@ declare class TrackEntry {
     /** When the mix percentage ({@link #mixtime} / {@link #mixDuration}) is less than the
      * `attachmentThreshold`, attachment timelines are applied while this animation is being mixed out. Defaults to
      * 0, so attachment timelines are not applied while this animation is being mixed out. */
-    attachmentThreshold: number;
-    /** When the mix percentage ({@link #mixTime} / {@link #mixDuration}) is less than the
-     * `drawOrderThreshold`, draw order timelines are applied while this animation is being mixed out. Defaults to 0,
-     * so draw order timelines are not applied while this animation is being mixed out. */
-    drawOrderThreshold: number;
+    mixAttachmentThreshold: number;
+    /** When {@link #getAlpha()} is greater than <code>alphaAttachmentThreshold</code>, attachment timelines are applied.
+     * Defaults to 0, so attachment timelines are always applied. */
+    alphaAttachmentThreshold: number;
+    /** When the mix percentage ({@link #getMixTime()} / {@link #getMixDuration()}) is less than the
+     * <code>mixDrawOrderThreshold</code>, draw order timelines are applied while this animation is being mixed out. Defaults to
+     * 0, so draw order timelines are not applied while this animation is being mixed out. */
+    mixDrawOrderThreshold: number;
     /** Seconds when this animation starts, both initially and after looping. Defaults to 0.
      *
      * When changing the `animationStart` time, it often makes sense to set {@link #animationLast} to the same
@@ -3980,9 +4302,12 @@ declare class TrackEntry {
      * When using {@link AnimationState#addAnimation()} with a `delay` <= 0, note the
      * {@link #delay} is set using the mix duration from the {@link AnimationStateData}, not a mix duration set
      * afterward. */
-    mixDuration: number;
+    _mixDuration: number;
     interruptAlpha: number;
     totalAlpha: number;
+    set mixDuration(mixDuration: number);
+    get mixDuration(): number;
+    setMixDurationWithDelay(mixDuration: any, delay: any): void;
     /** Controls how properties keyed in the animation are mixed with lower tracks. Defaults to {@link MixBlend#replace}, which
      * replaces the values from the lower tracks with the animation values. {@link MixBlend#add} adds the animation values to
      * the values from the lower tracks.
@@ -4012,20 +4337,27 @@ declare class TrackEntry {
      * long way. TrackEntry chooses the short way the first time it is applied and remembers that direction. */
     resetRotationDirections(): void;
     getTrackComplete(): number;
+    /** Returns true if this track entry has been applied at least once.
+     * <p>
+     * See {@link AnimationState#apply(Skeleton)}. */
+    wasApplied(): boolean;
+    /** Returns true if there is a {@link #getNext()} track entry and it will become the current track entry during the next
+     * {@link AnimationState#update(float)}. */
+    isNextReady(): boolean;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4038,8 +4370,8 @@ declare class TrackEntry {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for a transform constraint. A transform constraint adjusts the world transform of the constrained
  * bones to match that of the target bone.
@@ -4047,19 +4379,23 @@ declare class TrackEntry {
  * See [Transform constraints](http://esotericsoftware.com/spine-transform-constraints) in the Spine User Guide. */
 declare class TransformConstraint {
     constructor(data: any, skeleton: any);
-    mixRotate: any;
-    mixX: any;
-    mixY: any;
-    mixScaleX: any;
-    mixScaleY: any;
-    mixShearY: any;
+    /** The transform constraint's setup pose data. */
+    data: any;
+    /** The bones that will be modified by this transform constraint. */
+    bones: any[];
+    /** The target bone whose world transform will be copied to the constrained bones. */
+    target: any;
+    mixRotate: number;
+    mixX: number;
+    mixY: number;
+    mixScaleX: number;
+    mixScaleY: number;
+    mixShearY: number;
     temp: Vector2;
     active: boolean;
-    data: any;
-    bones: any[];
-    target: any;
     isActive(): boolean;
-    update(): void;
+    setToSetupPose(): void;
+    update(physics: any): void;
     applyAbsoluteWorld(): void;
     applyRelativeWorld(): void;
     applyAbsoluteLocal(): void;
@@ -4067,17 +4403,17 @@ declare class TransformConstraint {
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4090,19 +4426,20 @@ declare class TransformConstraint {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link TransformConstraint}.
  *
  * See [Transform constraints](http://esotericsoftware.com/spine-transform-constraints) in the Spine User Guide. */
 declare class TransformConstraintData extends ConstraintData {
     constructor(name: any);
-    set target(arg: any);
-    get target(): any;
-    _target: any;
     /** The bones that will be modified by this transform constraint. */
     bones: any[];
+    /** The target bone whose world transform will be copied to the constrained bones. */
+    _target: null;
+    set target(boneData: never);
+    get target(): never;
     mixRotate: number;
     mixX: number;
     mixY: number;
@@ -4128,7 +4465,7 @@ declare class TransformConstraintData extends ConstraintData {
  * {@link TransformConstraint#scaleMix}, and {@link TransformConstraint#shearMix}. */
 declare class TransformConstraintTimeline extends CurveTimeline {
     /** The index of the transform constraint slot in {@link Skeleton#transformConstraints} that will be changed. */
-    transformConstraintIndex: any;
+    constraintIndex: number;
     /** The time in seconds, rotate mix, translate mix, scale mix, and shear mix for the specified key frame. */
     setFrame(frame: any, time: any, mixRotate: any, mixX: any, mixY: any, mixScaleX: any, mixScaleY: any, mixShearY: any): void;
     apply(skeleton: any, lastTime: any, time: any, firedEvents: any, alpha: any, blend: any, direction: any): void;
@@ -4136,32 +4473,32 @@ declare class TransformConstraintTimeline extends CurveTimeline {
 /** Changes a bone's local {@link Bone#x} and {@link Bone#y}. */
 declare class TranslateTimeline extends CurveTimeline2 {
     constructor(frameCount: any, bezierCount: any, boneIndex: any);
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#x}. */
 declare class TranslateXTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /** Changes a bone's local {@link Bone#x}. */
 declare class TranslateYTimeline extends CurveTimeline1 {
-    boneIndex: any;
+    boneIndex: number;
     apply(skeleton: any, lastTime: any, time: any, events: any, alpha: any, blend: any, direction: any): void;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4174,8 +4511,8 @@ declare class TranslateYTimeline extends CurveTimeline1 {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Triangulator {
     static isConcave(index: any, vertexCount: any, vertices: any, indices: any): boolean;
@@ -4192,35 +4529,33 @@ declare class Triangulator {
     decompose(verticesArray: any, triangles: any): any[];
 }
 declare class Utils {
+    static SUPPORTS_TYPED_ARRAYS: boolean;
     static arrayCopy(source: any, sourceStart: any, dest: any, destStart: any, numElements: any): void;
     static arrayFill(array: any, fromIndex: any, toIndex: any, value: any): void;
     static setArraySize(array: any, size: any, value?: number): any;
     static ensureArrayCapacity(array: any, size: any, value?: number): any;
     static newArray(size: any, defaultValue: any): any[];
-    static newFloatArray(size: any): any[] | Float32Array;
-    static newShortArray(size: any): any[] | Int16Array;
+    static newFloatArray(size: any): any[] | Float32Array<any>;
+    static newShortArray(size: any): any[] | Int16Array<any>;
     static toFloatArray(array: any): any;
     static toSinglePrecision(value: any): any;
     static webkit602BugfixHelper(alpha: any, blend: any): void;
     static contains(array: any, element: any, identity?: boolean): boolean;
     static enumValue(type: any, name: any): any;
 }
-declare namespace Utils {
-    let SUPPORTS_TYPED_ARRAYS: boolean;
-}
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4233,8 +4568,8 @@ declare namespace Utils {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Vector3 {
     constructor(x?: number, y?: number, z?: number);
@@ -4257,12 +4592,13 @@ declare class Vector3 {
 /** Base class for an attachment with vertices that are transformed by one or more bones and can be deformed by a slot's
  * {@link Slot#deform}. */
 declare class VertexAttachment extends Attachment {
+    static nextID: number;
     /** The unique ID for this attachment. */
     id: number;
     /** The bones which affect the {@link #getVertices()}. The array entries are, for each vertex, the number of bones affecting
      * the vertex followed by that many bone indices, which is the index of the bone in {@link Skeleton#bones}. Will be null
      * if this attachment has no weights. */
-    bones: any;
+    bones: null;
     /** The vertex positions in the bone's coordinate system. For a non-weighted attachment, the values are `x,y`
      * entries for each vertex. For a weighted attachment, the values are `x,y,weight` entries for each bone affecting
      * each vertex. */
@@ -4288,9 +4624,6 @@ declare class VertexAttachment extends Attachment {
     /** Does not copy id (generated) or name (set on construction). **/
     copyTo(attachment: any): void;
 }
-declare namespace VertexAttachment {
-    let nextID: number;
-}
 declare class VertexAttribute {
     constructor(name: any, type: any, numElements: any);
     name: any;
@@ -4299,28 +4632,28 @@ declare class VertexAttribute {
 }
 declare class WindowedMean {
     constructor(windowSize?: number);
+    values: any[];
     addedValues: number;
     lastValue: number;
     mean: number;
     dirty: boolean;
-    values: any[];
     hasEnoughData(): boolean;
     addValue(value: any): void;
     getMean(): number;
 }
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4333,8 +4666,8 @@ declare class WindowedMean {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class CanvasTexture extends Texture {
     setFilters(minFilter: any, magFilter: any): void;
@@ -4358,17 +4691,17 @@ declare class SkeletonRenderer {
 import { Vector2d } from 'melonjs';
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4381,29 +4714,28 @@ import { Vector2d } from 'melonjs';
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 declare class Sequence {
+    static _nextID: number;
     static nextID(): number;
     constructor(count: any);
     id: number;
+    regions: any[];
     start: number;
     digits: number;
     /** The index of the region to show for the setup pose. */
     setupIndex: number;
-    regions: any[];
     copy(): Sequence;
     apply(slot: any, attachment: any): void;
     getPath(basePath: any, index: any): any;
 }
-declare namespace Sequence {
-    let _nextID: number;
-}
 declare class Vertices {
-    constructor(bones?: null, vertices?: null);
+    constructor(bones?: null, vertices?: null, length?: number);
     bones: any;
     vertices: any;
+    length: number;
 }
 import { Color as Color$1 } from 'melonjs';
 import { Polygon } from 'melonjs';
