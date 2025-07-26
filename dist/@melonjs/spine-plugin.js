@@ -1,25 +1,25 @@
 /*!
- * melonJS Spine plugin - v1.5.0
+ * melonJS Spine plugin - v1.6.0
  * http://www.melonjs.org
  * @melonjs/spine-plugin is licensed under the MIT License.
  * http://www.opensource.org/licenses/mit-license
- * @copyright (C) 2011 - 2023 AltByte Pte Ltd
+ * @copyright (C) 2011 - 2025 AltByte Pte Ltd
  */
-import { Color as Color$1, Polygon, Math as Math$1, loader, utils, plugin, Renderable as Renderable$1, Vector2d } from 'melonjs';
+import { Color as Color$1, Polygon, Math as Math$1, loader, utils, plugin, Renderable as Renderable$1, version as version$1, Vector2d } from 'melonjs';
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -32,13 +32,11 @@ import { Color as Color$1, Polygon, Math as Math$1, loader, utils, plugin, Rende
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class IntSet {
-    constructor() {
-        this.array = new Array();
-    }
+    array = new Array();
     add(value) {
         let contains = this.contains(value);
         this.array[value | 0] = value | 0;
@@ -55,10 +53,8 @@ class IntSet {
     }
 }
 class StringSet {
-    constructor() {
-        this.entries = {};
-        this.size = 0;
-    }
+    entries = {};
+    size = 0;
     add(value) {
         let contains = this.entries[value];
         this.entries[value] = true;
@@ -83,6 +79,15 @@ class StringSet {
     }
 }
 class Color {
+    r;
+    g;
+    b;
+    a;
+    static WHITE = new Color(1, 1, 1, 1);
+    static RED = new Color(1, 0, 0, 1);
+    static GREEN = new Color(0, 1, 0, 1);
+    static BLUE = new Color(0, 0, 1, 1);
+    static MAGENTA = new Color(1, 0, 1, 1);
     constructor(r = 0, g = 0, b = 0, a = 0) {
         this.r = r;
         this.g = g;
@@ -148,16 +153,22 @@ class Color {
         color.g = ((value & 0x0000ff00) >>> 8) / 255;
         color.b = ((value & 0x000000ff)) / 255;
     }
-    static fromString(hex) {
-        return new Color().setFromString(hex);
+    toRgb888() {
+        const hex = (x) => ("0" + (x * 255).toString(16)).slice(-2);
+        return Number("0x" + hex(this.r) + hex(this.g) + hex(this.b));
+    }
+    static fromString(hex, color = new Color()) {
+        return color.setFromString(hex);
     }
 }
-Color.WHITE = new Color(1, 1, 1, 1);
-Color.RED = new Color(1, 0, 0, 1);
-Color.GREEN = new Color(0, 1, 0, 1);
-Color.BLUE = new Color(0, 0, 1, 1);
-Color.MAGENTA = new Color(1, 0, 1, 1);
 class MathUtils {
+    static PI = 3.1415927;
+    static PI2 = MathUtils.PI * 2;
+    static invPI2 = 1 / MathUtils.PI2;
+    static radiansToDegrees = 180 / MathUtils.PI;
+    static radDeg = MathUtils.radiansToDegrees;
+    static degreesToRadians = MathUtils.PI / 180;
+    static degRad = MathUtils.degreesToRadians;
     static clamp(value, min, max) {
         if (value < min)
             return min;
@@ -170,6 +181,9 @@ class MathUtils {
     }
     static sinDeg(degrees) {
         return Math.sin(degrees * MathUtils.degRad);
+    }
+    static atan2Deg(y, x) {
+        return Math.atan2(y, x) * MathUtils.degRad;
     }
     static signum(value) {
         return value > 0 ? 1 : value < 0 ? -1 : 0;
@@ -195,21 +209,15 @@ class MathUtils {
         return value && (value & (value - 1)) === 0;
     }
 }
-MathUtils.PI = 3.1415927;
-MathUtils.PI2 = MathUtils.PI * 2;
-MathUtils.radiansToDegrees = 180 / MathUtils.PI;
-MathUtils.radDeg = MathUtils.radiansToDegrees;
-MathUtils.degreesToRadians = MathUtils.PI / 180;
-MathUtils.degRad = MathUtils.degreesToRadians;
 class Interpolation {
     apply(start, end, a) {
         return start + (end - start) * this.applyInternal(a);
     }
 }
 class Pow extends Interpolation {
+    power = 2;
     constructor(power) {
         super();
-        this.power = 2;
         this.power = power;
     }
     applyInternal(a) {
@@ -227,6 +235,7 @@ class PowOut extends Pow {
     }
 }
 class Utils {
+    static SUPPORTS_TYPED_ARRAYS = typeof (Float32Array) !== "undefined";
     static arrayCopy(source, sourceStart, dest, destStart, numElements) {
         for (let i = sourceStart, j = destStart; i < sourceStart + numElements; i++, j++) {
             dest[j] = source[i];
@@ -297,7 +306,6 @@ class Utils {
         return type[name[0].toUpperCase() + name.slice(1)];
     }
 }
-Utils.SUPPORTS_TYPED_ARRAYS = typeof (Float32Array) !== "undefined";
 class DebugUtils {
     static logBones(skeleton) {
         for (let i = 0; i < skeleton.bones.length; i++) {
@@ -307,8 +315,9 @@ class DebugUtils {
     }
 }
 class Pool {
+    items = new Array();
+    instantiator;
     constructor(instantiator) {
-        this.items = new Array();
         this.instantiator = instantiator;
     }
     obtain() {
@@ -328,6 +337,8 @@ class Pool {
     }
 }
 class Vector2 {
+    x;
+    y;
     constructor(x = 0, y = 0) {
         this.x = x;
         this.y = y;
@@ -352,15 +363,13 @@ class Vector2 {
     }
 }
 class TimeKeeper {
-    constructor() {
-        this.maxDelta = 0.064;
-        this.framesPerSecond = 0;
-        this.delta = 0;
-        this.totalTime = 0;
-        this.lastTime = Date.now() / 1000;
-        this.frameCount = 0;
-        this.frameTime = 0;
-    }
+    maxDelta = 0.064;
+    framesPerSecond = 0;
+    delta = 0;
+    totalTime = 0;
+    lastTime = Date.now() / 1000;
+    frameCount = 0;
+    frameTime = 0;
     update() {
         let now = Date.now() / 1000;
         this.delta = now - this.lastTime;
@@ -378,11 +387,12 @@ class TimeKeeper {
     }
 }
 class WindowedMean {
+    values;
+    addedValues = 0;
+    lastValue = 0;
+    mean = 0;
+    dirty = true;
     constructor(windowSize = 32) {
-        this.addedValues = 0;
-        this.lastValue = 0;
-        this.mean = 0;
-        this.dirty = true;
         this.values = new Array(windowSize);
     }
     hasEnoughData() {
@@ -413,17 +423,17 @@ class WindowedMean {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -436,11 +446,12 @@ class WindowedMean {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** The base class for all attachments. */
 class Attachment {
+    name;
     constructor(name) {
         if (!name)
             throw new Error("name cannot be null.");
@@ -450,24 +461,25 @@ class Attachment {
 /** Base class for an attachment with vertices that are transformed by one or more bones and can be deformed by a slot's
  * {@link Slot#deform}. */
 class VertexAttachment extends Attachment {
+    static nextID = 0;
+    /** The unique ID for this attachment. */
+    id = VertexAttachment.nextID++;
+    /** The bones which affect the {@link #getVertices()}. The array entries are, for each vertex, the number of bones affecting
+     * the vertex followed by that many bone indices, which is the index of the bone in {@link Skeleton#bones}. Will be null
+     * if this attachment has no weights. */
+    bones = null;
+    /** The vertex positions in the bone's coordinate system. For a non-weighted attachment, the values are `x,y`
+     * entries for each vertex. For a weighted attachment, the values are `x,y,weight` entries for each bone affecting
+     * each vertex. */
+    vertices = [];
+    /** The maximum number of world vertex values that can be output by
+     * {@link #computeWorldVertices()} using the `count` parameter. */
+    worldVerticesLength = 0;
+    /** Timelines for the timeline attachment are also applied to this attachment.
+     * May be null if no attachment-specific timelines should be applied. */
+    timelineAttachment = this;
     constructor(name) {
         super(name);
-        /** The unique ID for this attachment. */
-        this.id = VertexAttachment.nextID++;
-        /** The bones which affect the {@link #getVertices()}. The array entries are, for each vertex, the number of bones affecting
-         * the vertex followed by that many bone indices, which is the index of the bone in {@link Skeleton#bones}. Will be null
-         * if this attachment has no weights. */
-        this.bones = null;
-        /** The vertex positions in the bone's coordinate system. For a non-weighted attachment, the values are `x,y`
-         * entries for each vertex. For a weighted attachment, the values are `x,y,weight` entries for each bone affecting
-         * each vertex. */
-        this.vertices = [];
-        /** The maximum number of world vertex values that can be output by
-         * {@link #computeWorldVertices()} using the `count` parameter. */
-        this.worldVerticesLength = 0;
-        /** Timelines for the timeline attachment are also applied to this attachment.
-         * May be null if no attachment-specific timelines should be applied. */
-        this.timelineAttachment = this;
     }
     /** Transforms the attachment's local {@link #vertices} to world coordinates. If the slot's {@link Slot#deform} is
      * not empty, it is used to deform the vertices.
@@ -555,21 +567,20 @@ class VertexAttachment extends Attachment {
         attachment.timelineAttachment = this.timelineAttachment;
     }
 }
-VertexAttachment.nextID = 0;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -582,16 +593,18 @@ VertexAttachment.nextID = 0;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Sequence {
+    static _nextID = 0;
+    id = Sequence.nextID();
+    regions;
+    start = 0;
+    digits = 0;
+    /** The index of the region to show for the setup pose. */
+    setupIndex = 0;
     constructor(count) {
-        this.id = Sequence.nextID();
-        this.start = 0;
-        this.digits = 0;
-        /** The index of the region to show for the setup pose. */
-        this.setupIndex = 0;
         this.regions = new Array(count);
     }
     copy() {
@@ -626,7 +639,6 @@ class Sequence {
         return Sequence._nextID++;
     }
 }
-Sequence._nextID = 0;
 var SequenceMode;
 (function (SequenceMode) {
     SequenceMode[SequenceMode["hold"] = 0] = "hold";
@@ -649,17 +661,17 @@ const SequenceModeValues = [
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -672,14 +684,18 @@ const SequenceModeValues = [
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** A simple container for a list of timelines and a name. */
 class Animation {
+    /** The animation's name, which is unique across all animations in the skeleton. */
+    name;
+    timelines = [];
+    timelineIds = new StringSet();
+    /** The duration of the animation in seconds, which is the highest time of all keys in the timeline. */
+    duration;
     constructor(name, timelines, duration) {
-        this.timelines = [];
-        this.timelineIds = new StringSet();
         if (!name)
             throw new Error("name cannot be null.");
         this.name = name;
@@ -763,22 +779,33 @@ const Property = {
     scaleY: 4,
     shearX: 5,
     shearY: 6,
-    rgb: 7,
-    alpha: 8,
-    rgb2: 9,
-    attachment: 10,
-    deform: 11,
-    event: 12,
-    drawOrder: 13,
-    ikConstraint: 14,
-    transformConstraint: 15,
-    pathConstraintPosition: 16,
-    pathConstraintSpacing: 17,
-    pathConstraintMix: 18,
-    sequence: 19
+    inherit: 7,
+    rgb: 8,
+    alpha: 9,
+    rgb2: 10,
+    attachment: 11,
+    deform: 12,
+    event: 13,
+    drawOrder: 14,
+    ikConstraint: 15,
+    transformConstraint: 16,
+    pathConstraintPosition: 17,
+    pathConstraintSpacing: 18,
+    pathConstraintMix: 19,
+    physicsConstraintInertia: 20,
+    physicsConstraintStrength: 21,
+    physicsConstraintDamping: 22,
+    physicsConstraintMass: 23,
+    physicsConstraintWind: 24,
+    physicsConstraintGravity: 25,
+    physicsConstraintMix: 26,
+    physicsConstraintReset: 27,
+    sequence: 28,
 };
 /** The interface for all timelines. */
 class Timeline {
+    propertyIds;
+    frames;
     constructor(frameCount, propertyIds) {
         this.propertyIds = propertyIds;
         this.frames = Utils.newFloatArray(frameCount * this.getFrameEntries());
@@ -812,6 +839,7 @@ class Timeline {
 }
 /** The base class for timelines that use interpolation between key frame values. */
 class CurveTimeline extends Timeline {
+    curves; // type, x, y, ...
     constructor(frameCount, bezierCount, propertyIds) {
         super(frameCount, propertyIds);
         this.curves = Utils.newFloatArray(frameCount + bezierCount * 18 /*BEZIER_SIZE*/);
@@ -927,6 +955,96 @@ class CurveTimeline1 extends CurveTimeline {
         }
         return this.getBezierValue(time, i, 1 /*VALUE*/, curveType - 2 /*BEZIER*/);
     }
+    getRelativeValue(time, alpha, blend, current, setup) {
+        if (time < this.frames[0]) {
+            switch (blend) {
+                case MixBlend.setup:
+                    return setup;
+                case MixBlend.first:
+                    return current + (setup - current) * alpha;
+            }
+            return current;
+        }
+        let value = this.getCurveValue(time);
+        switch (blend) {
+            case MixBlend.setup:
+                return setup + value * alpha;
+            case MixBlend.first:
+            case MixBlend.replace:
+                value += setup - current;
+        }
+        return current + value * alpha;
+    }
+    getAbsoluteValue(time, alpha, blend, current, setup) {
+        if (time < this.frames[0]) {
+            switch (blend) {
+                case MixBlend.setup:
+                    return setup;
+                case MixBlend.first:
+                    return current + (setup - current) * alpha;
+            }
+            return current;
+        }
+        let value = this.getCurveValue(time);
+        if (blend == MixBlend.setup)
+            return setup + (value - setup) * alpha;
+        return current + (value - current) * alpha;
+    }
+    getAbsoluteValue2(time, alpha, blend, current, setup, value) {
+        if (time < this.frames[0]) {
+            switch (blend) {
+                case MixBlend.setup:
+                    return setup;
+                case MixBlend.first:
+                    return current + (setup - current) * alpha;
+            }
+            return current;
+        }
+        if (blend == MixBlend.setup)
+            return setup + (value - setup) * alpha;
+        return current + (value - current) * alpha;
+    }
+    getScaleValue(time, alpha, blend, direction, current, setup) {
+        const frames = this.frames;
+        if (time < frames[0]) {
+            switch (blend) {
+                case MixBlend.setup:
+                    return setup;
+                case MixBlend.first:
+                    return current + (setup - current) * alpha;
+            }
+            return current;
+        }
+        let value = this.getCurveValue(time) * setup;
+        if (alpha == 1) {
+            if (blend == MixBlend.add)
+                return current + value - setup;
+            return value;
+        }
+        // Mixing out uses sign of setup or current pose, else use sign of key.
+        if (direction == MixDirection.mixOut) {
+            switch (blend) {
+                case MixBlend.setup:
+                    return setup + (Math.abs(value) * MathUtils.signum(setup) - setup) * alpha;
+                case MixBlend.first:
+                case MixBlend.replace:
+                    return current + (Math.abs(value) * MathUtils.signum(current) - current) * alpha;
+            }
+        }
+        else {
+            let s = 0;
+            switch (blend) {
+                case MixBlend.setup:
+                    s = Math.abs(setup) * MathUtils.signum(value);
+                    return s + (value - s) * alpha;
+                case MixBlend.first:
+                case MixBlend.replace:
+                    s = Math.abs(current) * MathUtils.signum(value);
+                    return s + (value - s) * alpha;
+            }
+        }
+        return current + (value - setup) * alpha;
+    }
 }
 /** The base class for a {@link CurveTimeline} which sets two properties. */
 class CurveTimeline2 extends CurveTimeline {
@@ -950,44 +1068,22 @@ class CurveTimeline2 extends CurveTimeline {
 }
 /** Changes a bone's local {@link Bone#rotation}. */
 class RotateTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.rotate + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
-        if (!bone.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.rotation = bone.data.rotation;
-                    return;
-                case MixBlend.first:
-                    bone.rotation += (bone.data.rotation - bone.rotation) * alpha;
-            }
-            return;
-        }
-        let r = this.getCurveValue(time);
-        switch (blend) {
-            case MixBlend.setup:
-                bone.rotation = bone.data.rotation + r * alpha;
-                break;
-            case MixBlend.first:
-            case MixBlend.replace:
-                r += bone.data.rotation - bone.rotation;
-            case MixBlend.add:
-                bone.rotation += r * alpha;
-        }
+        if (bone.active)
+            bone.rotation = this.getRelativeValue(time, alpha, blend, bone.rotation, bone.data.rotation);
     }
 }
 /** Changes a bone's local {@link Bone#x} and {@link Bone#y}. */
 class TranslateTimeline extends CurveTimeline2 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.x + "|" + boneIndex, Property.y + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
@@ -1045,81 +1141,35 @@ class TranslateTimeline extends CurveTimeline2 {
 }
 /** Changes a bone's local {@link Bone#x}. */
 class TranslateXTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.x + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
-        if (!bone.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.x = bone.data.x;
-                    return;
-                case MixBlend.first:
-                    bone.x += (bone.data.x - bone.x) * alpha;
-            }
-            return;
-        }
-        let x = this.getCurveValue(time);
-        switch (blend) {
-            case MixBlend.setup:
-                bone.x = bone.data.x + x * alpha;
-                break;
-            case MixBlend.first:
-            case MixBlend.replace:
-                bone.x += (bone.data.x + x - bone.x) * alpha;
-                break;
-            case MixBlend.add:
-                bone.x += x * alpha;
-        }
+        if (bone.active)
+            bone.x = this.getRelativeValue(time, alpha, blend, bone.x, bone.data.x);
     }
 }
 /** Changes a bone's local {@link Bone#x}. */
 class TranslateYTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.y + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
-        if (!bone.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.y = bone.data.y;
-                    return;
-                case MixBlend.first:
-                    bone.y += (bone.data.y - bone.y) * alpha;
-            }
-            return;
-        }
-        let y = this.getCurveValue(time);
-        switch (blend) {
-            case MixBlend.setup:
-                bone.y = bone.data.y + y * alpha;
-                break;
-            case MixBlend.first:
-            case MixBlend.replace:
-                bone.y += (bone.data.y + y - bone.y) * alpha;
-                break;
-            case MixBlend.add:
-                bone.y += y * alpha;
-        }
+        if (bone.active)
+            bone.y = this.getRelativeValue(time, alpha, blend, bone.y, bone.data.y);
     }
 }
 /** Changes a bone's local {@link Bone#scaleX)} and {@link Bone#scaleY}. */
 class ScaleTimeline extends CurveTimeline2 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.scaleX + "|" + boneIndex, Property.scaleY + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
@@ -1218,139 +1268,35 @@ class ScaleTimeline extends CurveTimeline2 {
 }
 /** Changes a bone's local {@link Bone#scaleX)} and {@link Bone#scaleY}. */
 class ScaleXTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.scaleX + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
-        if (!bone.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.scaleX = bone.data.scaleX;
-                    return;
-                case MixBlend.first:
-                    bone.scaleX += (bone.data.scaleX - bone.scaleX) * alpha;
-            }
-            return;
-        }
-        let x = this.getCurveValue(time) * bone.data.scaleX;
-        if (alpha == 1) {
-            if (blend == MixBlend.add)
-                bone.scaleX += x - bone.data.scaleX;
-            else
-                bone.scaleX = x;
-        }
-        else {
-            // Mixing out uses sign of setup or current pose, else use sign of key.
-            let bx = 0;
-            if (direction == MixDirection.mixOut) {
-                switch (blend) {
-                    case MixBlend.setup:
-                        bx = bone.data.scaleX;
-                        bone.scaleX = bx + (Math.abs(x) * MathUtils.signum(bx) - bx) * alpha;
-                        break;
-                    case MixBlend.first:
-                    case MixBlend.replace:
-                        bx = bone.scaleX;
-                        bone.scaleX = bx + (Math.abs(x) * MathUtils.signum(bx) - bx) * alpha;
-                        break;
-                    case MixBlend.add:
-                        bone.scaleX += (x - bone.data.scaleX) * alpha;
-                }
-            }
-            else {
-                switch (blend) {
-                    case MixBlend.setup:
-                        bx = Math.abs(bone.data.scaleX) * MathUtils.signum(x);
-                        bone.scaleX = bx + (x - bx) * alpha;
-                        break;
-                    case MixBlend.first:
-                    case MixBlend.replace:
-                        bx = Math.abs(bone.scaleX) * MathUtils.signum(x);
-                        bone.scaleX = bx + (x - bx) * alpha;
-                        break;
-                    case MixBlend.add:
-                        bone.scaleX += (x - bone.data.scaleX) * alpha;
-                }
-            }
-        }
+        if (bone.active)
+            bone.scaleX = this.getScaleValue(time, alpha, blend, direction, bone.scaleX, bone.data.scaleX);
     }
 }
 /** Changes a bone's local {@link Bone#scaleX)} and {@link Bone#scaleY}. */
 class ScaleYTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.scaleY + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
-        if (!bone.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.scaleY = bone.data.scaleY;
-                    return;
-                case MixBlend.first:
-                    bone.scaleY += (bone.data.scaleY - bone.scaleY) * alpha;
-            }
-            return;
-        }
-        let y = this.getCurveValue(time) * bone.data.scaleY;
-        if (alpha == 1) {
-            if (blend == MixBlend.add)
-                bone.scaleY += y - bone.data.scaleY;
-            else
-                bone.scaleY = y;
-        }
-        else {
-            // Mixing out uses sign of setup or current pose, else use sign of key.
-            let by = 0;
-            if (direction == MixDirection.mixOut) {
-                switch (blend) {
-                    case MixBlend.setup:
-                        by = bone.data.scaleY;
-                        bone.scaleY = by + (Math.abs(y) * MathUtils.signum(by) - by) * alpha;
-                        break;
-                    case MixBlend.first:
-                    case MixBlend.replace:
-                        by = bone.scaleY;
-                        bone.scaleY = by + (Math.abs(y) * MathUtils.signum(by) - by) * alpha;
-                        break;
-                    case MixBlend.add:
-                        bone.scaleY += (y - bone.data.scaleY) * alpha;
-                }
-            }
-            else {
-                switch (blend) {
-                    case MixBlend.setup:
-                        by = Math.abs(bone.data.scaleY) * MathUtils.signum(y);
-                        bone.scaleY = by + (y - by) * alpha;
-                        break;
-                    case MixBlend.first:
-                    case MixBlend.replace:
-                        by = Math.abs(bone.scaleY) * MathUtils.signum(y);
-                        bone.scaleY = by + (y - by) * alpha;
-                        break;
-                    case MixBlend.add:
-                        bone.scaleY += (y - bone.data.scaleY) * alpha;
-                }
-            }
-        }
+        if (bone.active)
+            bone.scaleY = this.getScaleValue(time, alpha, blend, direction, bone.scaleY, bone.data.scaleY);
     }
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 class ShearTimeline extends CurveTimeline2 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.shearX + "|" + boneIndex, Property.shearY + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
@@ -1408,84 +1354,73 @@ class ShearTimeline extends CurveTimeline2 {
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 class ShearXTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.shearX + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
-        if (!bone.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.shearX = bone.data.shearX;
-                    return;
-                case MixBlend.first:
-                    bone.shearX += (bone.data.shearX - bone.shearX) * alpha;
-            }
-            return;
-        }
-        let x = this.getCurveValue(time);
-        switch (blend) {
-            case MixBlend.setup:
-                bone.shearX = bone.data.shearX + x * alpha;
-                break;
-            case MixBlend.first:
-            case MixBlend.replace:
-                bone.shearX += (bone.data.shearX + x - bone.shearX) * alpha;
-                break;
-            case MixBlend.add:
-                bone.shearX += x * alpha;
-        }
+        if (bone.active)
+            bone.shearX = this.getRelativeValue(time, alpha, blend, bone.shearX, bone.data.shearX);
     }
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 class ShearYTimeline extends CurveTimeline1 {
+    boneIndex = 0;
     constructor(frameCount, bezierCount, boneIndex) {
         super(frameCount, bezierCount, Property.shearY + "|" + boneIndex);
-        this.boneIndex = 0;
         this.boneIndex = boneIndex;
+    }
+    apply(skeleton, lastTime, time, events, alpha, blend, direction) {
+        let bone = skeleton.bones[this.boneIndex];
+        if (bone.active)
+            bone.shearY = this.getRelativeValue(time, alpha, blend, bone.shearY, bone.data.shearY);
+    }
+}
+class InheritTimeline extends Timeline {
+    boneIndex = 0;
+    constructor(frameCount, boneIndex) {
+        super(frameCount, [Property.inherit + "|" + boneIndex]);
+        this.boneIndex = boneIndex;
+    }
+    getFrameEntries() {
+        return 2 /*ENTRIES*/;
+    }
+    /** Sets the transform mode for the specified frame.
+     * @param frame Between 0 and <code>frameCount</code>, inclusive.
+     * @param time The frame time in seconds. */
+    setFrame(frame, time, inherit) {
+        frame *= 2 /*ENTRIES*/;
+        this.frames[frame] = time;
+        this.frames[frame + 1 /*INHERIT*/] = inherit;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
         let bone = skeleton.bones[this.boneIndex];
         if (!bone.active)
             return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    bone.shearY = bone.data.shearY;
-                    return;
-                case MixBlend.first:
-                    bone.shearY += (bone.data.shearY - bone.shearY) * alpha;
-            }
+        if (direction == MixDirection.mixOut) {
+            if (blend == MixBlend.setup)
+                bone.inherit = bone.data.inherit;
             return;
         }
-        let y = this.getCurveValue(time);
-        switch (blend) {
-            case MixBlend.setup:
-                bone.shearY = bone.data.shearY + y * alpha;
-                break;
-            case MixBlend.first:
-            case MixBlend.replace:
-                bone.shearY += (bone.data.shearY + y - bone.shearY) * alpha;
-                break;
-            case MixBlend.add:
-                bone.shearY += y * alpha;
+        let frames = this.frames;
+        if (time < frames[0]) {
+            if (blend == MixBlend.setup || blend == MixBlend.first)
+                bone.inherit = bone.data.inherit;
+            return;
         }
+        bone.inherit = this.frames[Timeline.search(frames, time, 2 /*ENTRIES*/) + 1 /*INHERIT*/];
     }
 }
 /** Changes a slot's {@link Slot#color}. */
 class RGBATimeline extends CurveTimeline {
+    slotIndex = 0;
     constructor(frameCount, bezierCount, slotIndex) {
         super(frameCount, bezierCount, [
             Property.rgb + "|" + slotIndex,
             Property.alpha + "|" + slotIndex
         ]);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
     }
     getFrameEntries() {
@@ -1556,11 +1491,11 @@ class RGBATimeline extends CurveTimeline {
 }
 /** Changes a slot's {@link Slot#color}. */
 class RGBTimeline extends CurveTimeline {
+    slotIndex = 0;
     constructor(frameCount, bezierCount, slotIndex) {
         super(frameCount, bezierCount, [
             Property.rgb + "|" + slotIndex
         ]);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
     }
     getFrameEntries() {
@@ -1639,9 +1574,9 @@ class RGBTimeline extends CurveTimeline {
 }
 /** Changes a bone's local {@link Bone#shearX} and {@link Bone#shearY}. */
 class AlphaTimeline extends CurveTimeline1 {
+    slotIndex = 0;
     constructor(frameCount, bezierCount, slotIndex) {
         super(frameCount, bezierCount, Property.alpha + "|" + slotIndex);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
     }
     apply(skeleton, lastTime, time, events, alpha, blend, direction) {
@@ -1649,7 +1584,7 @@ class AlphaTimeline extends CurveTimeline1 {
         if (!slot.bone.active)
             return;
         let color = slot.color;
-        if (time < this.frames[0]) { // Time is before first frame.
+        if (time < this.frames[0]) {
             let setup = slot.data.color;
             switch (blend) {
                 case MixBlend.setup:
@@ -1672,13 +1607,13 @@ class AlphaTimeline extends CurveTimeline1 {
 }
 /** Changes a slot's {@link Slot#color} and {@link Slot#darkColor} for two color tinting. */
 class RGBA2Timeline extends CurveTimeline {
+    slotIndex = 0;
     constructor(frameCount, bezierCount, slotIndex) {
         super(frameCount, bezierCount, [
             Property.rgb + "|" + slotIndex,
             Property.alpha + "|" + slotIndex,
             Property.rgb2 + "|" + slotIndex
         ]);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
     }
     getFrameEntries() {
@@ -1782,12 +1717,12 @@ class RGBA2Timeline extends CurveTimeline {
 }
 /** Changes a slot's {@link Slot#color} and {@link Slot#darkColor} for two color tinting. */
 class RGB2Timeline extends CurveTimeline {
+    slotIndex = 0;
     constructor(frameCount, bezierCount, slotIndex) {
         super(frameCount, bezierCount, [
             Property.rgb + "|" + slotIndex,
             Property.rgb2 + "|" + slotIndex
         ]);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
     }
     getFrameEntries() {
@@ -1896,11 +1831,13 @@ class RGB2Timeline extends CurveTimeline {
 }
 /** Changes a slot's {@link Slot#attachment}. */
 class AttachmentTimeline extends Timeline {
+    slotIndex = 0;
+    /** The attachment name for each key frame. May contain null values to clear the attachment. */
+    attachmentNames;
     constructor(frameCount, slotIndex) {
         super(frameCount, [
             Property.attachment + "|" + slotIndex
         ]);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
         this.attachmentNames = new Array(frameCount);
     }
@@ -1934,11 +1871,15 @@ class AttachmentTimeline extends Timeline {
 }
 /** Changes a slot's {@link Slot#deform} to deform a {@link VertexAttachment}. */
 class DeformTimeline extends CurveTimeline {
+    slotIndex = 0;
+    /** The attachment that will be deformed. */
+    attachment;
+    /** The vertices for each key frame. */
+    vertices;
     constructor(frameCount, bezierCount, slotIndex, attachment) {
         super(frameCount, bezierCount, [
             Property.deform + "|" + slotIndex + "|" + attachment.id
         ]);
-        this.slotIndex = 0;
         this.slotIndex = slotIndex;
         this.attachment = attachment;
         this.vertices = new Array(frameCount);
@@ -2043,7 +1984,7 @@ class DeformTimeline extends CurveTimeline {
             return;
         }
         deform.length = vertexCount;
-        if (time >= frames[frames.length - 1]) { // Time is after last frame.
+        if (time >= frames[frames.length - 1]) {
             let lastVertices = vertices[frames.length - 1];
             if (alpha == 1) {
                 if (blend == MixBlend.add) {
@@ -2186,6 +2127,9 @@ class DeformTimeline extends CurveTimeline {
 }
 /** Fires an {@link Event} when specific animation times are reached. */
 class EventTimeline extends Timeline {
+    static propertyIds = ["" + Property.event];
+    /** The event for each key frame. */
+    events;
     constructor(frameCount) {
         super(frameCount, EventTimeline.propertyIds);
         this.events = new Array(frameCount);
@@ -2204,14 +2148,14 @@ class EventTimeline extends Timeline {
             return;
         let frames = this.frames;
         let frameCount = this.frames.length;
-        if (lastTime > time) { // Fire events after last time for looped animations.
+        if (lastTime > time) { // Apply after lastTime for looped animations.
             this.apply(skeleton, lastTime, Number.MAX_VALUE, firedEvents, alpha, blend, direction);
             lastTime = -1;
         }
         else if (lastTime >= frames[frameCount - 1]) // Last time is after last frame.
             return;
         if (time < frames[0])
-            return; // Time is before first frame.
+            return;
         let i = 0;
         if (lastTime < frames[0])
             i = 0;
@@ -2228,9 +2172,11 @@ class EventTimeline extends Timeline {
             firedEvents.push(this.events[i]);
     }
 }
-EventTimeline.propertyIds = ["" + Property.event];
 /** Changes a skeleton's {@link Skeleton#drawOrder}. */
 class DrawOrderTimeline extends Timeline {
+    static propertyIds = ["" + Property.drawOrder];
+    /** The draw order for each key frame. See {@link #setFrame(int, float, int[])}. */
+    drawOrders;
     constructor(frameCount) {
         super(frameCount, DrawOrderTimeline.propertyIds);
         this.drawOrders = new Array(frameCount);
@@ -2268,17 +2214,16 @@ class DrawOrderTimeline extends Timeline {
         }
     }
 }
-DrawOrderTimeline.propertyIds = ["" + Property.drawOrder];
 /** Changes an IK constraint's {@link IkConstraint#mix}, {@link IkConstraint#softness},
  * {@link IkConstraint#bendDirection}, {@link IkConstraint#stretch}, and {@link IkConstraint#compress}. */
 class IkConstraintTimeline extends CurveTimeline {
+    /** The index of the IK constraint in {@link Skeleton#getIkConstraints()} that will be changed when this timeline is applied */
+    constraintIndex = 0;
     constructor(frameCount, bezierCount, ikConstraintIndex) {
         super(frameCount, bezierCount, [
             Property.ikConstraint + "|" + ikConstraintIndex
         ]);
-        /** The index of the IK constraint slot in {@link Skeleton#ikConstraints} that will be changed. */
-        this.ikConstraintIndex = 0;
-        this.ikConstraintIndex = ikConstraintIndex;
+        this.constraintIndex = ikConstraintIndex;
     }
     getFrameEntries() {
         return 6 /*ENTRIES*/;
@@ -2294,7 +2239,7 @@ class IkConstraintTimeline extends CurveTimeline {
         this.frames[frame + 5 /*STRETCH*/] = stretch ? 1 : 0;
     }
     apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
-        let constraint = skeleton.ikConstraints[this.ikConstraintIndex];
+        let constraint = skeleton.ikConstraints[this.constraintIndex];
         if (!constraint.active)
             return;
         let frames = this.frames;
@@ -2364,13 +2309,13 @@ class IkConstraintTimeline extends CurveTimeline {
 /** Changes a transform constraint's {@link TransformConstraint#rotateMix}, {@link TransformConstraint#translateMix},
  * {@link TransformConstraint#scaleMix}, and {@link TransformConstraint#shearMix}. */
 class TransformConstraintTimeline extends CurveTimeline {
+    /** The index of the transform constraint slot in {@link Skeleton#transformConstraints} that will be changed. */
+    constraintIndex = 0;
     constructor(frameCount, bezierCount, transformConstraintIndex) {
         super(frameCount, bezierCount, [
             Property.transformConstraint + "|" + transformConstraintIndex
         ]);
-        /** The index of the transform constraint slot in {@link Skeleton#transformConstraints} that will be changed. */
-        this.transformConstraintIndex = 0;
-        this.transformConstraintIndex = transformConstraintIndex;
+        this.constraintIndex = transformConstraintIndex;
     }
     getFrameEntries() {
         return 7 /*ENTRIES*/;
@@ -2388,7 +2333,7 @@ class TransformConstraintTimeline extends CurveTimeline {
         frames[frame + 6 /*SHEARY*/] = mixShearY;
     }
     apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
-        let constraint = skeleton.transformConstraints[this.transformConstraintIndex];
+        let constraint = skeleton.transformConstraints[this.constraintIndex];
         if (!constraint.active)
             return;
         let frames = this.frames;
@@ -2470,74 +2415,45 @@ class TransformConstraintTimeline extends CurveTimeline {
 }
 /** Changes a path constraint's {@link PathConstraint#position}. */
 class PathConstraintPositionTimeline extends CurveTimeline1 {
+    /** The index of the path constraint in {@link Skeleton#getPathConstraints()} that will be changed when this timeline is
+     * applied. */
+    constraintIndex = 0;
     constructor(frameCount, bezierCount, pathConstraintIndex) {
         super(frameCount, bezierCount, Property.pathConstraintPosition + "|" + pathConstraintIndex);
-        /** The index of the path constraint slot in {@link Skeleton#pathConstraints} that will be changed. */
-        this.pathConstraintIndex = 0;
-        this.pathConstraintIndex = pathConstraintIndex;
+        this.constraintIndex = pathConstraintIndex;
     }
     apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
-        let constraint = skeleton.pathConstraints[this.pathConstraintIndex];
-        if (!constraint.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    constraint.position = constraint.data.position;
-                    return;
-                case MixBlend.first:
-                    constraint.position += (constraint.data.position - constraint.position) * alpha;
-            }
-            return;
-        }
-        let position = this.getCurveValue(time);
-        if (blend == MixBlend.setup)
-            constraint.position = constraint.data.position + (position - constraint.data.position) * alpha;
-        else
-            constraint.position += (position - constraint.position) * alpha;
+        let constraint = skeleton.pathConstraints[this.constraintIndex];
+        if (constraint.active)
+            constraint.position = this.getAbsoluteValue(time, alpha, blend, constraint.position, constraint.data.position);
     }
 }
 /** Changes a path constraint's {@link PathConstraint#spacing}. */
 class PathConstraintSpacingTimeline extends CurveTimeline1 {
+    /** The index of the path constraint in {@link Skeleton#getPathConstraints()} that will be changed when this timeline is
+     * applied. */
+    constraintIndex = 0;
     constructor(frameCount, bezierCount, pathConstraintIndex) {
         super(frameCount, bezierCount, Property.pathConstraintSpacing + "|" + pathConstraintIndex);
-        /** The index of the path constraint slot in {@link Skeleton#getPathConstraints()} that will be changed. */
-        this.pathConstraintIndex = 0;
-        this.pathConstraintIndex = pathConstraintIndex;
+        this.constraintIndex = pathConstraintIndex;
     }
     apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
-        let constraint = skeleton.pathConstraints[this.pathConstraintIndex];
-        if (!constraint.active)
-            return;
-        let frames = this.frames;
-        if (time < frames[0]) {
-            switch (blend) {
-                case MixBlend.setup:
-                    constraint.spacing = constraint.data.spacing;
-                    return;
-                case MixBlend.first:
-                    constraint.spacing += (constraint.data.spacing - constraint.spacing) * alpha;
-            }
-            return;
-        }
-        let spacing = this.getCurveValue(time);
-        if (blend == MixBlend.setup)
-            constraint.spacing = constraint.data.spacing + (spacing - constraint.data.spacing) * alpha;
-        else
-            constraint.spacing += (spacing - constraint.spacing) * alpha;
+        let constraint = skeleton.pathConstraints[this.constraintIndex];
+        if (constraint.active)
+            constraint.spacing = this.getAbsoluteValue(time, alpha, blend, constraint.spacing, constraint.data.spacing);
     }
 }
 /** Changes a transform constraint's {@link PathConstraint#getMixRotate()}, {@link PathConstraint#getMixX()}, and
  * {@link PathConstraint#getMixY()}. */
 class PathConstraintMixTimeline extends CurveTimeline {
+    /** The index of the path constraint in {@link Skeleton#getPathConstraints()} that will be changed when this timeline is
+     * applied. */
+    constraintIndex = 0;
     constructor(frameCount, bezierCount, pathConstraintIndex) {
         super(frameCount, bezierCount, [
             Property.pathConstraintMix + "|" + pathConstraintIndex
         ]);
-        /** The index of the path constraint slot in {@link Skeleton#getPathConstraints()} that will be changed. */
-        this.pathConstraintIndex = 0;
-        this.pathConstraintIndex = pathConstraintIndex;
+        this.constraintIndex = pathConstraintIndex;
     }
     getFrameEntries() {
         return 4 /*ENTRIES*/;
@@ -2551,7 +2467,7 @@ class PathConstraintMixTimeline extends CurveTimeline {
         frames[frame + 3 /*Y*/] = mixY;
     }
     apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
-        let constraint = skeleton.pathConstraints[this.pathConstraintIndex];
+        let constraint = skeleton.pathConstraints[this.constraintIndex];
         if (!constraint.active)
             return;
         let frames = this.frames;
@@ -2606,8 +2522,213 @@ class PathConstraintMixTimeline extends CurveTimeline {
         }
     }
 }
+/** The base class for most {@link PhysicsConstraint} timelines. */
+class PhysicsConstraintTimeline extends CurveTimeline1 {
+    /** The index of the physics constraint in {@link Skeleton#getPhysicsConstraints()} that will be changed when this timeline
+     * is applied, or -1 if all physics constraints in the skeleton will be changed. */
+    constraintIndex = 0;
+    /** @param physicsConstraintIndex -1 for all physics constraints in the skeleton. */
+    constructor(frameCount, bezierCount, physicsConstraintIndex, property) {
+        super(frameCount, bezierCount, property + "|" + physicsConstraintIndex);
+        this.constraintIndex = physicsConstraintIndex;
+    }
+    apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
+        let constraint;
+        if (this.constraintIndex == -1) {
+            const value = time >= this.frames[0] ? this.getCurveValue(time) : 0;
+            for (const constraint of skeleton.physicsConstraints) {
+                if (constraint.active && this.global(constraint.data))
+                    this.set(constraint, this.getAbsoluteValue2(time, alpha, blend, this.get(constraint), this.setup(constraint), value));
+            }
+        }
+        else {
+            constraint = skeleton.physicsConstraints[this.constraintIndex];
+            if (constraint.active)
+                this.set(constraint, this.getAbsoluteValue(time, alpha, blend, this.get(constraint), this.setup(constraint)));
+        }
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getInertia()}. */
+class PhysicsConstraintInertiaTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintInertia);
+    }
+    setup(constraint) {
+        return constraint.data.inertia;
+    }
+    get(constraint) {
+        return constraint.inertia;
+    }
+    set(constraint, value) {
+        constraint.inertia = value;
+    }
+    global(constraint) {
+        return constraint.inertiaGlobal;
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getStrength()}. */
+class PhysicsConstraintStrengthTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintStrength);
+    }
+    setup(constraint) {
+        return constraint.data.strength;
+    }
+    get(constraint) {
+        return constraint.strength;
+    }
+    set(constraint, value) {
+        constraint.strength = value;
+    }
+    global(constraint) {
+        return constraint.strengthGlobal;
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getDamping()}. */
+class PhysicsConstraintDampingTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintDamping);
+    }
+    setup(constraint) {
+        return constraint.data.damping;
+    }
+    get(constraint) {
+        return constraint.damping;
+    }
+    set(constraint, value) {
+        constraint.damping = value;
+    }
+    global(constraint) {
+        return constraint.dampingGlobal;
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getMassInverse()}. The timeline values are not inverted. */
+class PhysicsConstraintMassTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintMass);
+    }
+    setup(constraint) {
+        return 1 / constraint.data.massInverse;
+    }
+    get(constraint) {
+        return 1 / constraint.massInverse;
+    }
+    set(constraint, value) {
+        constraint.massInverse = 1 / value;
+    }
+    global(constraint) {
+        return constraint.massGlobal;
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getWind()}. */
+class PhysicsConstraintWindTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintWind);
+    }
+    setup(constraint) {
+        return constraint.data.wind;
+    }
+    get(constraint) {
+        return constraint.wind;
+    }
+    set(constraint, value) {
+        constraint.wind = value;
+    }
+    global(constraint) {
+        return constraint.windGlobal;
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getGravity()}. */
+class PhysicsConstraintGravityTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintGravity);
+    }
+    setup(constraint) {
+        return constraint.data.gravity;
+    }
+    get(constraint) {
+        return constraint.gravity;
+    }
+    set(constraint, value) {
+        constraint.gravity = value;
+    }
+    global(constraint) {
+        return constraint.gravityGlobal;
+    }
+}
+/** Changes a physics constraint's {@link PhysicsConstraint#getMix()}. */
+class PhysicsConstraintMixTimeline extends PhysicsConstraintTimeline {
+    constructor(frameCount, bezierCount, physicsConstraintIndex) {
+        super(frameCount, bezierCount, physicsConstraintIndex, Property.physicsConstraintMix);
+    }
+    setup(constraint) {
+        return constraint.data.mix;
+    }
+    get(constraint) {
+        return constraint.mix;
+    }
+    set(constraint, value) {
+        constraint.mix = value;
+    }
+    global(constraint) {
+        return constraint.mixGlobal;
+    }
+}
+/** Resets a physics constraint when specific animation times are reached. */
+class PhysicsConstraintResetTimeline extends Timeline {
+    static propertyIds = [Property.physicsConstraintReset.toString()];
+    /** The index of the physics constraint in {@link Skeleton#getPhysicsConstraints()} that will be reset when this timeline is
+    * applied, or -1 if all physics constraints in the skeleton will be reset. */
+    constraintIndex;
+    /** @param physicsConstraintIndex -1 for all physics constraints in the skeleton. */
+    constructor(frameCount, physicsConstraintIndex) {
+        super(frameCount, PhysicsConstraintResetTimeline.propertyIds);
+        this.constraintIndex = physicsConstraintIndex;
+    }
+    getFrameCount() {
+        return this.frames.length;
+    }
+    /** Sets the time for the specified frame.
+     * @param frame Between 0 and <code>frameCount</code>, inclusive. */
+    setFrame(frame, time) {
+        this.frames[frame] = time;
+    }
+    /** Resets the physics constraint when frames > <code>lastTime</code> and <= <code>time</code>. */
+    apply(skeleton, lastTime, time, firedEvents, alpha, blend, direction) {
+        let constraint;
+        if (this.constraintIndex != -1) {
+            constraint = skeleton.physicsConstraints[this.constraintIndex];
+            if (!constraint.active)
+                return;
+        }
+        const frames = this.frames;
+        if (lastTime > time) { // Apply after lastTime for looped animations.
+            this.apply(skeleton, lastTime, Number.MAX_VALUE, [], alpha, blend, direction);
+            lastTime = -1;
+        }
+        else if (lastTime >= frames[frames.length - 1]) // Last time is after last frame.
+            return;
+        if (time < frames[0])
+            return;
+        if (lastTime < frames[0] || time >= frames[Timeline.search1(frames, lastTime) + 1]) {
+            if (constraint != null)
+                constraint.reset();
+            else {
+                for (const constraint of skeleton.physicsConstraints) {
+                    if (constraint.active)
+                        constraint.reset();
+                }
+            }
+        }
+    }
+}
 /** Changes a slot's {@link Slot#getSequenceIndex()} for an attachment's {@link Sequence}. */
 class SequenceTimeline extends Timeline {
+    static ENTRIES = 3;
+    static MODE = 1;
+    static DELAY = 2;
+    slotIndex;
+    attachment;
     constructor(frameCount, slotIndex, attachment) {
         super(frameCount, [
             Property.sequence + "|" + slotIndex + "|" + attachment.sequence.id
@@ -2645,8 +2766,13 @@ class SequenceTimeline extends Timeline {
                 || slotAttachment.timelineAttachment != attachment)
                 return;
         }
+        if (direction == MixDirection.mixOut) {
+            if (blend == MixBlend.setup)
+                slot.sequenceIndex = -1;
+            return;
+        }
         let frames = this.frames;
-        if (time < frames[0]) { // Time is before first frame.
+        if (time < frames[0]) {
             if (blend == MixBlend.setup || blend == MixBlend.first)
                 slot.sequenceIndex = -1;
             return;
@@ -2692,23 +2818,20 @@ class SequenceTimeline extends Timeline {
         slot.sequenceIndex = index;
     }
 }
-SequenceTimeline.ENTRIES = 3;
-SequenceTimeline.MODE = 1;
-SequenceTimeline.DELAY = 2;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -2721,32 +2844,35 @@ SequenceTimeline.DELAY = 2;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Applies animations over time, queues animations for later playback, mixes (crossfading) between animations, and applies
  * multiple animations on top of each other (layering).
  *
  * See [Applying Animations](http://esotericsoftware.com/spine-applying-animations/) in the Spine Runtimes Guide. */
 class AnimationState {
+    static _emptyAnimation = new Animation("<empty>", [], 0);
     static emptyAnimation() {
         return AnimationState._emptyAnimation;
     }
+    /** The AnimationStateData to look up mix durations. */
+    data;
+    /** The list of tracks that currently have animations, which may contain null entries. */
+    tracks = new Array();
+    /** Multiplier for the delta time when the animation state is updated, causing time for all animations and mixes to play slower
+     * or faster. Defaults to 1.
+     *
+     * See TrackEntry {@link TrackEntry#timeScale} for affecting a single animation. */
+    timeScale = 1;
+    unkeyedState = 0;
+    events = new Array();
+    listeners = new Array();
+    queue = new EventQueue(this);
+    propertyIDs = new StringSet();
+    animationsChanged = false;
+    trackEntryPool = new Pool(() => new TrackEntry());
     constructor(data) {
-        /** The list of tracks that currently have animations, which may contain null entries. */
-        this.tracks = new Array();
-        /** Multiplier for the delta time when the animation state is updated, causing time for all animations and mixes to play slower
-         * or faster. Defaults to 1.
-         *
-         * See TrackEntry {@link TrackEntry#timeScale} for affecting a single animation. */
-        this.timeScale = 1;
-        this.unkeyedState = 0;
-        this.events = new Array();
-        this.listeners = new Array();
-        this.queue = new EventQueue(this);
-        this.propertyIDs = new StringSet();
-        this.animationsChanged = false;
-        this.trackEntryPool = new Pool(() => new TrackEntry());
         this.data = data;
     }
     /** Increments each track entry {@link TrackEntry#trackTime()}, setting queued animations as current if needed. */
@@ -2812,12 +2938,12 @@ class AnimationState {
         let finished = this.updateMixingFrom(from, delta);
         from.animationLast = from.nextAnimationLast;
         from.trackLast = from.nextTrackLast;
-        // Require mixTime > 0 to ensure the mixing from entry was applied at least once.
-        if (to.mixTime > 0 && to.mixTime >= to.mixDuration) {
-            // Require totalAlpha == 0 to ensure mixing is complete, unless mixDuration == 0 (the transition is a single frame).
+        // The from entry was applied at least once and the mix is complete.
+        if (to.nextTrackLast != -1 && to.mixTime >= to.mixDuration) {
+            // Mixing is complete for all entries before the from entry or the mix is instantaneous.
             if (from.totalAlpha == 0 || to.mixDuration == 0) {
                 to.mixingFrom = from.mixingFrom;
-                if (from.mixingFrom)
+                if (from.mixingFrom != null)
                     from.mixingFrom.mixingTo = to;
                 to.interruptAlpha = from.interruptAlpha;
                 this.queue.end(from);
@@ -2846,11 +2972,12 @@ class AnimationState {
             applied = true;
             let blend = i == 0 ? MixBlend.first : current.mixBlend;
             // Apply mixing from entries first.
-            let mix = current.alpha;
+            let alpha = current.alpha;
             if (current.mixingFrom)
-                mix *= this.applyMixingFrom(current, skeleton, blend);
+                alpha *= this.applyMixingFrom(current, skeleton, blend);
             else if (current.trackTime >= current.trackEnd && !current.next)
-                mix = 0;
+                alpha = 0;
+            let attachments = alpha >= current.alphaAttachmentThreshold;
             // Apply current entry.
             let animationLast = current.animationLast, animationTime = current.getAnimationTime(), applyTime = animationTime;
             let applyEvents = events;
@@ -2860,17 +2987,19 @@ class AnimationState {
             }
             let timelines = current.animation.timelines;
             let timelineCount = timelines.length;
-            if ((i == 0 && mix == 1) || blend == MixBlend.add) {
+            if ((i == 0 && alpha == 1) || blend == MixBlend.add) {
+                if (i == 0)
+                    attachments = true;
                 for (let ii = 0; ii < timelineCount; ii++) {
                     // Fixes issue #302 on IOS9 where mix, blend sometimes became undefined and caused assets
                     // to sometimes stop rendering when using color correction, as their RGBA values become NaN.
                     // (https://github.com/pixijs/pixi-spine/issues/302)
-                    Utils.webkit602BugfixHelper(mix, blend);
+                    Utils.webkit602BugfixHelper(alpha, blend);
                     var timeline = timelines[ii];
                     if (timeline instanceof AttachmentTimeline)
-                        this.applyAttachmentTimeline(timeline, skeleton, applyTime, blend, true);
+                        this.applyAttachmentTimeline(timeline, skeleton, applyTime, blend, attachments);
                     else
-                        timeline.apply(skeleton, animationLast, applyTime, applyEvents, mix, blend, MixDirection.mixIn);
+                        timeline.apply(skeleton, animationLast, applyTime, applyEvents, alpha, blend, MixDirection.mixIn);
                 }
             }
             else {
@@ -2883,15 +3012,15 @@ class AnimationState {
                     let timeline = timelines[ii];
                     let timelineBlend = timelineMode[ii] == SUBSEQUENT ? blend : MixBlend.setup;
                     if (!shortestRotation && timeline instanceof RotateTimeline) {
-                        this.applyRotateTimeline(timeline, skeleton, applyTime, mix, timelineBlend, current.timelinesRotation, ii << 1, firstFrame);
+                        this.applyRotateTimeline(timeline, skeleton, applyTime, alpha, timelineBlend, current.timelinesRotation, ii << 1, firstFrame);
                     }
                     else if (timeline instanceof AttachmentTimeline) {
-                        this.applyAttachmentTimeline(timeline, skeleton, applyTime, blend, true);
+                        this.applyAttachmentTimeline(timeline, skeleton, applyTime, blend, attachments);
                     }
                     else {
                         // This fixes the WebKit 602 specific issue described at http://esotericsoftware.com/forum/iOS-10-disappearing-graphics-10109
-                        Utils.webkit602BugfixHelper(mix, blend);
-                        timeline.apply(skeleton, animationLast, applyTime, applyEvents, mix, timelineBlend, MixDirection.mixIn);
+                        Utils.webkit602BugfixHelper(alpha, blend);
+                        timeline.apply(skeleton, animationLast, applyTime, applyEvents, alpha, timelineBlend, MixDirection.mixIn);
                     }
                 }
             }
@@ -2933,7 +3062,7 @@ class AnimationState {
             if (blend != MixBlend.first)
                 blend = from.mixBlend;
         }
-        let attachments = mix < from.attachmentThreshold, drawOrder = mix < from.drawOrderThreshold;
+        let attachments = mix < from.mixAttachmentThreshold, drawOrder = mix < from.mixDrawOrderThreshold;
         let timelines = from.animation.timelines;
         let timelineCount = timelines.length;
         let alphaHold = from.alpha * to.interruptAlpha, alphaMix = alphaHold * (1 - mix);
@@ -2989,7 +3118,7 @@ class AnimationState {
                 if (!shortestRotation && timeline instanceof RotateTimeline)
                     this.applyRotateTimeline(timeline, skeleton, applyTime, alpha, timelineBlend, from.timelinesRotation, i << 1, firstFrame);
                 else if (timeline instanceof AttachmentTimeline)
-                    this.applyAttachmentTimeline(timeline, skeleton, applyTime, timelineBlend, attachments);
+                    this.applyAttachmentTimeline(timeline, skeleton, applyTime, timelineBlend, attachments && alpha >= from.alphaAttachmentThreshold);
                 else {
                     // This fixes the WebKit 602 specific issue described at http://esotericsoftware.com/forum/iOS-10-disappearing-graphics-10109
                     Utils.webkit602BugfixHelper(alpha, blend);
@@ -3054,7 +3183,7 @@ class AnimationState {
         }
         // Mix between rotations using the direction of the shortest route on the first frame while detecting crosses.
         let total = 0, diff = r2 - r1;
-        diff -= (16384 - ((16384.499999999996 - diff / 360) | 0)) * 360;
+        diff -= Math.ceil(diff / 360 - 0.5) * 360;
         if (diff == 0) {
             total = timelinesRotation[i];
         }
@@ -3105,8 +3234,14 @@ class AnimationState {
         }
         // Queue complete if completed a loop iteration or the animation.
         let complete = false;
-        if (entry.loop)
-            complete = duration == 0 || trackLastWrapped > entry.trackTime % duration;
+        if (entry.loop) {
+            if (duration == 0)
+                complete = true;
+            else {
+                const cycles = Math.floor(entry.trackTime / duration);
+                complete = cycles > 0 && cycles > Math.floor(entry.trackLast / duration);
+            }
+        }
         else
             complete = animationTime >= animationEnd && entry.animationLast < animationEnd;
         if (complete)
@@ -3241,12 +3376,14 @@ class AnimationState {
         if (!last) {
             this.setCurrent(trackIndex, entry, true);
             this.queue.drain();
+            if (delay < 0)
+                delay = 0;
         }
         else {
             last.next = entry;
             entry.previous = last;
             if (delay <= 0)
-                delay += last.getTrackComplete() - entry.mixDuration;
+                delay = Math.max(delay + last.getTrackComplete() - entry.mixDuration, 0);
         }
         entry.delay = delay;
         return entry;
@@ -3285,7 +3422,7 @@ class AnimationState {
     addEmptyAnimation(trackIndex, mixDuration = 0, delay = 0) {
         let entry = this.addAnimationWith(trackIndex, AnimationState.emptyAnimation(), false, delay);
         if (delay <= 0)
-            entry.delay += entry.mixDuration - mixDuration;
+            entry.delay = Math.max(entry.delay + entry.mixDuration - mixDuration, 0);
         entry.mixDuration = mixDuration;
         entry.trackEnd = mixDuration;
         return entry;
@@ -3321,8 +3458,9 @@ class AnimationState {
         entry.reverse = false;
         entry.shortestRotation = false;
         entry.eventThreshold = 0;
-        entry.attachmentThreshold = 0;
-        entry.drawOrderThreshold = 0;
+        entry.alphaAttachmentThreshold = 0;
+        entry.mixAttachmentThreshold = 0;
+        entry.mixDrawOrderThreshold = 0;
         entry.animationStart = 0;
         entry.animationEnd = animation.duration;
         entry.animationLast = -1;
@@ -3434,144 +3572,160 @@ class AnimationState {
         this.queue.clear();
     }
 }
-AnimationState._emptyAnimation = new Animation("<empty>", [], 0);
 /** Stores settings and other state for the playback of an animation on an {@link AnimationState} track.
  *
  * References to a track entry must not be kept after the {@link AnimationStateListener#dispose()} event occurs. */
 class TrackEntry {
-    constructor() {
-        /** The animation to apply for this track entry. */
-        this.animation = null;
-        this.previous = null;
-        /** The animation queued to start after this animation, or null. `next` makes up a linked list. */
-        this.next = null;
-        /** The track entry for the previous animation when mixing from the previous animation to this animation, or null if no
-         * mixing is currently occuring. When mixing from multiple animations, `mixingFrom` makes up a linked list. */
-        this.mixingFrom = null;
-        /** The track entry for the next animation when mixing from this animation to the next animation, or null if no mixing is
-         * currently occuring. When mixing to multiple animations, `mixingTo` makes up a linked list. */
-        this.mixingTo = null;
-        /** The listener for events generated by this track entry, or null.
-         *
-         * A track entry returned from {@link AnimationState#setAnimation()} is already the current animation
-         * for the track, so the track entry listener {@link AnimationStateListener#start()} will not be called. */
-        this.listener = null;
-        /** The index of the track where this track entry is either current or queued.
-         *
-         * See {@link AnimationState#getCurrent()}. */
-        this.trackIndex = 0;
-        /** If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its
-         * duration. */
-        this.loop = false;
-        /** If true, when mixing from the previous animation to this animation, the previous animation is applied as normal instead
-         * of being mixed out.
-         *
-         * When mixing between animations that key the same property, if a lower track also keys that property then the value will
-         * briefly dip toward the lower track value during the mix. This happens because the first animation mixes from 100% to 0%
-         * while the second animation mixes from 0% to 100%. Setting `holdPrevious` to true applies the first animation
-         * at 100% during the mix so the lower track value is overwritten. Such dipping does not occur on the lowest track which
-         * keys the property, only when a higher track also keys the property.
-         *
-         * Snapping will occur if `holdPrevious` is true and this animation does not key all the same properties as the
-         * previous animation. */
-        this.holdPrevious = false;
-        this.reverse = false;
-        this.shortestRotation = false;
-        /** When the mix percentage ({@link #mixTime} / {@link #mixDuration}) is less than the
-         * `eventThreshold`, event timelines are applied while this animation is being mixed out. Defaults to 0, so event
-         * timelines are not applied while this animation is being mixed out. */
-        this.eventThreshold = 0;
-        /** When the mix percentage ({@link #mixtime} / {@link #mixDuration}) is less than the
-         * `attachmentThreshold`, attachment timelines are applied while this animation is being mixed out. Defaults to
-         * 0, so attachment timelines are not applied while this animation is being mixed out. */
-        this.attachmentThreshold = 0;
-        /** When the mix percentage ({@link #mixTime} / {@link #mixDuration}) is less than the
-         * `drawOrderThreshold`, draw order timelines are applied while this animation is being mixed out. Defaults to 0,
-         * so draw order timelines are not applied while this animation is being mixed out. */
-        this.drawOrderThreshold = 0;
-        /** Seconds when this animation starts, both initially and after looping. Defaults to 0.
-         *
-         * When changing the `animationStart` time, it often makes sense to set {@link #animationLast} to the same
-         * value to prevent timeline keys before the start time from triggering. */
-        this.animationStart = 0;
-        /** Seconds for the last frame of this animation. Non-looping animations won't play past this time. Looping animations will
-         * loop back to {@link #animationStart} at this time. Defaults to the animation {@link Animation#duration}. */
-        this.animationEnd = 0;
-        /** The time in seconds this animation was last applied. Some timelines use this for one-time triggers. Eg, when this
-         * animation is applied, event timelines will fire all events between the `animationLast` time (exclusive) and
-         * `animationTime` (inclusive). Defaults to -1 to ensure triggers on frame 0 happen the first time this animation
-         * is applied. */
-        this.animationLast = 0;
-        this.nextAnimationLast = 0;
-        /** Seconds to postpone playing the animation. When this track entry is the current track entry, `delay`
-         * postpones incrementing the {@link #trackTime}. When this track entry is queued, `delay` is the time from
-         * the start of the previous animation to when this track entry will become the current track entry (ie when the previous
-         * track entry {@link TrackEntry#trackTime} >= this track entry's `delay`).
-         *
-         * {@link #timeScale} affects the delay. */
-        this.delay = 0;
-        /** Current time in seconds this track entry has been the current track entry. The track time determines
-         * {@link #animationTime}. The track time can be set to start the animation at a time other than 0, without affecting
-         * looping. */
-        this.trackTime = 0;
-        this.trackLast = 0;
-        this.nextTrackLast = 0;
-        /** The track time in seconds when this animation will be removed from the track. Defaults to the highest possible float
-         * value, meaning the animation will be applied until a new animation is set or the track is cleared. If the track end time
-         * is reached, no other animations are queued for playback, and mixing from any previous animations is complete, then the
-         * properties keyed by the animation are set to the setup pose and the track is cleared.
-         *
-         * It may be desired to use {@link AnimationState#addEmptyAnimation()} rather than have the animation
-         * abruptly cease being applied. */
-        this.trackEnd = 0;
-        /** Multiplier for the delta time when this track entry is updated, causing time for this animation to pass slower or
-         * faster. Defaults to 1.
-         *
-         * {@link #mixTime} is not affected by track entry time scale, so {@link #mixDuration} may need to be adjusted to
-         * match the animation speed.
-         *
-         * When using {@link AnimationState#addAnimation()} with a `delay` <= 0, note the
-         * {@link #delay} is set using the mix duration from the {@link AnimationStateData}, assuming time scale to be 1. If
-         * the time scale is not 1, the delay may need to be adjusted.
-         *
-         * See AnimationState {@link AnimationState#timeScale} for affecting all animations. */
-        this.timeScale = 0;
-        /** Values < 1 mix this animation with the skeleton's current pose (usually the pose resulting from lower tracks). Defaults
-         * to 1, which overwrites the skeleton's current pose with this animation.
-         *
-         * Typically track 0 is used to completely pose the skeleton, then alpha is used on higher tracks. It doesn't make sense to
-         * use alpha on track 0 if the skeleton pose is from the last frame render. */
-        this.alpha = 0;
-        /** Seconds from 0 to the {@link #getMixDuration()} when mixing from the previous animation to this animation. May be
-         * slightly more than `mixDuration` when the mix is complete. */
-        this.mixTime = 0;
-        /** Seconds for mixing from the previous animation to this animation. Defaults to the value provided by AnimationStateData
-         * {@link AnimationStateData#getMix()} based on the animation before this animation (if any).
-         *
-         * A mix duration of 0 still mixes out over one frame to provide the track entry being mixed out a chance to revert the
-         * properties it was animating.
-         *
-         * The `mixDuration` can be set manually rather than use the value from
-         * {@link AnimationStateData#getMix()}. In that case, the `mixDuration` can be set for a new
-         * track entry only before {@link AnimationState#update(float)} is first called.
-         *
-         * When using {@link AnimationState#addAnimation()} with a `delay` <= 0, note the
-         * {@link #delay} is set using the mix duration from the {@link AnimationStateData}, not a mix duration set
-         * afterward. */
-        this.mixDuration = 0;
-        this.interruptAlpha = 0;
-        this.totalAlpha = 0;
-        /** Controls how properties keyed in the animation are mixed with lower tracks. Defaults to {@link MixBlend#replace}, which
-         * replaces the values from the lower tracks with the animation values. {@link MixBlend#add} adds the animation values to
-         * the values from the lower tracks.
-         *
-         * The `mixBlend` can be set for a new track entry only before {@link AnimationState#apply()} is first
-         * called. */
-        this.mixBlend = MixBlend.replace;
-        this.timelineMode = new Array();
-        this.timelineHoldMix = new Array();
-        this.timelinesRotation = new Array();
+    /** The animation to apply for this track entry. */
+    animation = null;
+    previous = null;
+    /** The animation queued to start after this animation, or null. `next` makes up a linked list. */
+    next = null;
+    /** The track entry for the previous animation when mixing from the previous animation to this animation, or null if no
+     * mixing is currently occuring. When mixing from multiple animations, `mixingFrom` makes up a linked list. */
+    mixingFrom = null;
+    /** The track entry for the next animation when mixing from this animation to the next animation, or null if no mixing is
+     * currently occuring. When mixing to multiple animations, `mixingTo` makes up a linked list. */
+    mixingTo = null;
+    /** The listener for events generated by this track entry, or null.
+     *
+     * A track entry returned from {@link AnimationState#setAnimation()} is already the current animation
+     * for the track, so the track entry listener {@link AnimationStateListener#start()} will not be called. */
+    listener = null;
+    /** The index of the track where this track entry is either current or queued.
+     *
+     * See {@link AnimationState#getCurrent()}. */
+    trackIndex = 0;
+    /** If true, the animation will repeat. If false it will not, instead its last frame is applied if played beyond its
+     * duration. */
+    loop = false;
+    /** If true, when mixing from the previous animation to this animation, the previous animation is applied as normal instead
+     * of being mixed out.
+     *
+     * When mixing between animations that key the same property, if a lower track also keys that property then the value will
+     * briefly dip toward the lower track value during the mix. This happens because the first animation mixes from 100% to 0%
+     * while the second animation mixes from 0% to 100%. Setting `holdPrevious` to true applies the first animation
+     * at 100% during the mix so the lower track value is overwritten. Such dipping does not occur on the lowest track which
+     * keys the property, only when a higher track also keys the property.
+     *
+     * Snapping will occur if `holdPrevious` is true and this animation does not key all the same properties as the
+     * previous animation. */
+    holdPrevious = false;
+    reverse = false;
+    shortestRotation = false;
+    /** When the mix percentage ({@link #mixTime} / {@link #mixDuration}) is less than the
+     * `eventThreshold`, event timelines are applied while this animation is being mixed out. Defaults to 0, so event
+     * timelines are not applied while this animation is being mixed out. */
+    eventThreshold = 0;
+    /** When the mix percentage ({@link #mixtime} / {@link #mixDuration}) is less than the
+     * `attachmentThreshold`, attachment timelines are applied while this animation is being mixed out. Defaults to
+     * 0, so attachment timelines are not applied while this animation is being mixed out. */
+    mixAttachmentThreshold = 0;
+    /** When {@link #getAlpha()} is greater than <code>alphaAttachmentThreshold</code>, attachment timelines are applied.
+     * Defaults to 0, so attachment timelines are always applied. */
+    alphaAttachmentThreshold = 0;
+    /** When the mix percentage ({@link #getMixTime()} / {@link #getMixDuration()}) is less than the
+     * <code>mixDrawOrderThreshold</code>, draw order timelines are applied while this animation is being mixed out. Defaults to
+     * 0, so draw order timelines are not applied while this animation is being mixed out. */
+    mixDrawOrderThreshold = 0;
+    /** Seconds when this animation starts, both initially and after looping. Defaults to 0.
+     *
+     * When changing the `animationStart` time, it often makes sense to set {@link #animationLast} to the same
+     * value to prevent timeline keys before the start time from triggering. */
+    animationStart = 0;
+    /** Seconds for the last frame of this animation. Non-looping animations won't play past this time. Looping animations will
+     * loop back to {@link #animationStart} at this time. Defaults to the animation {@link Animation#duration}. */
+    animationEnd = 0;
+    /** The time in seconds this animation was last applied. Some timelines use this for one-time triggers. Eg, when this
+     * animation is applied, event timelines will fire all events between the `animationLast` time (exclusive) and
+     * `animationTime` (inclusive). Defaults to -1 to ensure triggers on frame 0 happen the first time this animation
+     * is applied. */
+    animationLast = 0;
+    nextAnimationLast = 0;
+    /** Seconds to postpone playing the animation. When this track entry is the current track entry, `delay`
+     * postpones incrementing the {@link #trackTime}. When this track entry is queued, `delay` is the time from
+     * the start of the previous animation to when this track entry will become the current track entry (ie when the previous
+     * track entry {@link TrackEntry#trackTime} >= this track entry's `delay`).
+     *
+     * {@link #timeScale} affects the delay. */
+    delay = 0;
+    /** Current time in seconds this track entry has been the current track entry. The track time determines
+     * {@link #animationTime}. The track time can be set to start the animation at a time other than 0, without affecting
+     * looping. */
+    trackTime = 0;
+    trackLast = 0;
+    nextTrackLast = 0;
+    /** The track time in seconds when this animation will be removed from the track. Defaults to the highest possible float
+     * value, meaning the animation will be applied until a new animation is set or the track is cleared. If the track end time
+     * is reached, no other animations are queued for playback, and mixing from any previous animations is complete, then the
+     * properties keyed by the animation are set to the setup pose and the track is cleared.
+     *
+     * It may be desired to use {@link AnimationState#addEmptyAnimation()} rather than have the animation
+     * abruptly cease being applied. */
+    trackEnd = 0;
+    /** Multiplier for the delta time when this track entry is updated, causing time for this animation to pass slower or
+     * faster. Defaults to 1.
+     *
+     * {@link #mixTime} is not affected by track entry time scale, so {@link #mixDuration} may need to be adjusted to
+     * match the animation speed.
+     *
+     * When using {@link AnimationState#addAnimation()} with a `delay` <= 0, note the
+     * {@link #delay} is set using the mix duration from the {@link AnimationStateData}, assuming time scale to be 1. If
+     * the time scale is not 1, the delay may need to be adjusted.
+     *
+     * See AnimationState {@link AnimationState#timeScale} for affecting all animations. */
+    timeScale = 0;
+    /** Values < 1 mix this animation with the skeleton's current pose (usually the pose resulting from lower tracks). Defaults
+     * to 1, which overwrites the skeleton's current pose with this animation.
+     *
+     * Typically track 0 is used to completely pose the skeleton, then alpha is used on higher tracks. It doesn't make sense to
+     * use alpha on track 0 if the skeleton pose is from the last frame render. */
+    alpha = 0;
+    /** Seconds from 0 to the {@link #getMixDuration()} when mixing from the previous animation to this animation. May be
+     * slightly more than `mixDuration` when the mix is complete. */
+    mixTime = 0;
+    /** Seconds for mixing from the previous animation to this animation. Defaults to the value provided by AnimationStateData
+     * {@link AnimationStateData#getMix()} based on the animation before this animation (if any).
+     *
+     * A mix duration of 0 still mixes out over one frame to provide the track entry being mixed out a chance to revert the
+     * properties it was animating.
+     *
+     * The `mixDuration` can be set manually rather than use the value from
+     * {@link AnimationStateData#getMix()}. In that case, the `mixDuration` can be set for a new
+     * track entry only before {@link AnimationState#update(float)} is first called.
+     *
+     * When using {@link AnimationState#addAnimation()} with a `delay` <= 0, note the
+     * {@link #delay} is set using the mix duration from the {@link AnimationStateData}, not a mix duration set
+     * afterward. */
+    _mixDuration = 0;
+    interruptAlpha = 0;
+    totalAlpha = 0;
+    get mixDuration() {
+        return this._mixDuration;
     }
+    set mixDuration(mixDuration) {
+        this._mixDuration = mixDuration;
+    }
+    setMixDurationWithDelay(mixDuration, delay) {
+        this._mixDuration = mixDuration;
+        if (delay <= 0) {
+            if (this.previous != null)
+                delay = Math.max(delay + this.previous.getTrackComplete() - mixDuration, 0);
+            else
+                delay = 0;
+        }
+        this.delay = delay;
+    }
+    /** Controls how properties keyed in the animation are mixed with lower tracks. Defaults to {@link MixBlend#replace}, which
+     * replaces the values from the lower tracks with the animation values. {@link MixBlend#add} adds the animation values to
+     * the values from the lower tracks.
+     *
+     * The `mixBlend` can be set for a new track entry only before {@link AnimationState#apply()} is first
+     * called. */
+    mixBlend = MixBlend.replace;
+    timelineMode = new Array();
+    timelineHoldMix = new Array();
+    timelinesRotation = new Array();
     reset() {
         this.next = null;
         this.previous = null;
@@ -3625,11 +3779,23 @@ class TrackEntry {
         }
         return this.trackTime; // Next update.
     }
+    /** Returns true if this track entry has been applied at least once.
+     * <p>
+     * See {@link AnimationState#apply(Skeleton)}. */
+    wasApplied() {
+        return this.nextTrackLast != -1;
+    }
+    /** Returns true if there is a {@link #getNext()} track entry and it will become the current track entry during the next
+     * {@link AnimationState#update(float)}. */
+    isNextReady() {
+        return this.next != null && this.nextTrackLast - this.next.delay >= 0;
+    }
 }
 class EventQueue {
+    objects = [];
+    drainDisabled = false;
+    animState;
     constructor(animState) {
-        this.objects = [];
-        this.drainDisabled = false;
         this.animState = animState;
     }
     start(entry) {
@@ -3796,17 +3962,17 @@ const CURRENT = 2;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3819,15 +3985,17 @@ const CURRENT = 2;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores mix (crossfade) durations to be applied when {@link AnimationState} animations are changed. */
 class AnimationStateData {
+    /** The SkeletonData to look up animations when they are specified by name. */
+    skeletonData;
+    animationToMixTime = {};
+    /** The mix duration to use when no mix duration has been defined between two animations. */
+    defaultMix = 0;
     constructor(skeletonData) {
-        this.animationToMixTime = {};
-        /** The mix duration to use when no mix duration has been defined between two animations. */
-        this.defaultMix = 0;
         if (!skeletonData)
             throw new Error("skeletonData cannot be null.");
         this.skeletonData = skeletonData;
@@ -3866,17 +4034,17 @@ class AnimationStateData {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3889,8 +4057,8 @@ class AnimationStateData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment with vertices that make up a polygon. Can be used for hit detection, creating physics bodies, spawning particle
  * effects, and more.
@@ -3898,9 +4066,9 @@ class AnimationStateData {
  * See {@link SkeletonBounds} and [Bounding Boxes](http://esotericsoftware.com/spine-bounding-boxes) in the Spine User
  * Guide. */
 class BoundingBoxAttachment extends VertexAttachment {
+    color = new Color(1, 1, 1, 1);
     constructor(name) {
         super(name);
-        this.color = new Color(1, 1, 1, 1);
     }
     copy() {
         let copy = new BoundingBoxAttachment(this.name);
@@ -3912,17 +4080,17 @@ class BoundingBoxAttachment extends VertexAttachment {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3935,20 +4103,20 @@ class BoundingBoxAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment with vertices that make up a polygon used for clipping the rendering of other attachments. */
 class ClippingAttachment extends VertexAttachment {
+    /** Clipping is performed between the clipping polygon's slot and the end slot. Returns null if clipping is done until the end of
+     * the skeleton's rendering. */
+    endSlot = null;
+    // Nonessential.
+    /** The color of the clipping polygon as it was in Spine. Available only when nonessential data was exported. Clipping polygons
+     * are not usually rendered at runtime. */
+    color = new Color(0.2275, 0.2275, 0.8078, 1); // ce3a3aff
     constructor(name) {
         super(name);
-        /** Clipping is performed between the clipping polygon's slot and the end slot. Returns null if clipping is done until the end of
-         * the skeleton's rendering. */
-        this.endSlot = null;
-        // Nonessential.
-        /** The color of the clipping polygon as it was in Spine. Available only when nonessential data was exported. Clipping polygons
-         * are not usually rendered at runtime. */
-        this.color = new Color(0.2275, 0.2275, 0.8078, 1); // ce3a3aff
     }
     copy() {
         let copy = new ClippingAttachment(this.name);
@@ -3961,17 +4129,17 @@ class ClippingAttachment extends VertexAttachment {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -3984,10 +4152,11 @@ class ClippingAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Texture {
+    _image;
     constructor(image) {
         this._image = image;
     }
@@ -4012,19 +4181,18 @@ var TextureWrap;
     TextureWrap[TextureWrap["Repeat"] = 10497] = "Repeat"; // WebGLRenderingContext.REPEAT
 })(TextureWrap || (TextureWrap = {}));
 class TextureRegion {
-    constructor() {
-        this.u = 0;
-        this.v = 0;
-        this.u2 = 0;
-        this.v2 = 0;
-        this.width = 0;
-        this.height = 0;
-        this.degrees = 0;
-        this.offsetX = 0;
-        this.offsetY = 0;
-        this.originalWidth = 0;
-        this.originalHeight = 0;
-    }
+    texture;
+    u = 0;
+    v = 0;
+    u2 = 0;
+    v2 = 0;
+    width = 0;
+    height = 0;
+    degrees = 0;
+    offsetX = 0;
+    offsetY = 0;
+    originalWidth = 0;
+    originalHeight = 0;
 }
 class FakeTexture extends Texture {
     setFilters(minFilter, magFilter) { }
@@ -4034,17 +4202,17 @@ class FakeTexture extends Texture {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4057,13 +4225,13 @@ class FakeTexture extends Texture {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class TextureAtlas {
+    pages = new Array();
+    regions = new Array();
     constructor(atlasText) {
-        this.pages = new Array();
-        this.regions = new Array();
         let reader = new TextureAtlasReader(atlasText);
         let entry = new Array(4);
         let pageFields = {};
@@ -4218,15 +4386,15 @@ class TextureAtlas {
             page.setTexture(assetManager.get(pathPrefix + page.name));
     }
     dispose() {
-        var _a;
         for (let i = 0; i < this.pages.length; i++) {
-            (_a = this.pages[i].texture) === null || _a === void 0 ? void 0 : _a.dispose();
+            this.pages[i].texture?.dispose();
         }
     }
 }
 class TextureAtlasReader {
+    lines;
+    index = 0;
     constructor(text) {
-        this.index = 0;
         this.lines = text.split(/\r\n|\r|\n/);
     }
     readLine() {
@@ -4258,16 +4426,17 @@ class TextureAtlasReader {
     }
 }
 class TextureAtlasPage {
+    name;
+    minFilter = TextureFilter.Nearest;
+    magFilter = TextureFilter.Nearest;
+    uWrap = TextureWrap.ClampToEdge;
+    vWrap = TextureWrap.ClampToEdge;
+    texture = null;
+    width = 0;
+    height = 0;
+    pma = false;
+    regions = new Array();
     constructor(name) {
-        this.minFilter = TextureFilter.Nearest;
-        this.magFilter = TextureFilter.Nearest;
-        this.uWrap = TextureWrap.ClampToEdge;
-        this.vWrap = TextureWrap.ClampToEdge;
-        this.texture = null;
-        this.width = 0;
-        this.height = 0;
-        this.pma = false;
-        this.regions = new Array();
         this.name = name;
     }
     setTexture(texture) {
@@ -4279,18 +4448,20 @@ class TextureAtlasPage {
     }
 }
 class TextureAtlasRegion extends TextureRegion {
+    page;
+    name;
+    x = 0;
+    y = 0;
+    offsetX = 0;
+    offsetY = 0;
+    originalWidth = 0;
+    originalHeight = 0;
+    index = 0;
+    degrees = 0;
+    names = null;
+    values = null;
     constructor(page, name) {
         super();
-        this.x = 0;
-        this.y = 0;
-        this.offsetX = 0;
-        this.offsetY = 0;
-        this.originalWidth = 0;
-        this.originalHeight = 0;
-        this.index = 0;
-        this.degrees = 0;
-        this.names = null;
-        this.values = null;
         this.page = page;
         this.name = name;
         page.regions.push(this);
@@ -4299,17 +4470,17 @@ class TextureAtlasRegion extends TextureRegion {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4322,39 +4493,41 @@ class TextureAtlasRegion extends TextureRegion {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment that displays a textured mesh. A mesh has hull vertices and internal vertices within the hull. Holes are not
  * supported. Each vertex has UVs (texture coordinates) and triangles are used to map an image on to the mesh.
  *
  * See [Mesh attachments](http://esotericsoftware.com/spine-meshes) in the Spine User Guide. */
 class MeshAttachment extends VertexAttachment {
+    region = null;
+    /** The name of the texture region for this attachment. */
+    path;
+    /** The UV pair for each vertex, normalized within the texture region. */
+    regionUVs = [];
+    /** The UV pair for each vertex, normalized within the entire texture.
+     *
+     * See {@link #updateUVs}. */
+    uvs = [];
+    /** Triplets of vertex indices which describe the mesh's triangulation. */
+    triangles = [];
+    /** The color to tint the mesh. */
+    color = new Color(1, 1, 1, 1);
+    /** The width of the mesh's image. Available only when nonessential data was exported. */
+    width = 0;
+    /** The height of the mesh's image. Available only when nonessential data was exported. */
+    height = 0;
+    /** The number of entries at the beginning of {@link #vertices} that make up the mesh hull. */
+    hullLength = 0;
+    /** Vertex index pairs describing edges for controling triangulation. Mesh triangles will never cross edges. Only available if
+     * nonessential data was exported. Triangulation is not performed at runtime. */
+    edges = [];
+    parentMesh = null;
+    sequence = null;
+    tempColor = new Color(0, 0, 0, 0);
     constructor(name, path) {
         super(name);
-        this.region = null;
-        /** The UV pair for each vertex, normalized within the texture region. */
-        this.regionUVs = [];
-        /** The UV pair for each vertex, normalized within the entire texture.
-         *
-         * See {@link #updateUVs}. */
-        this.uvs = [];
-        /** Triplets of vertex indices which describe the mesh's triangulation. */
-        this.triangles = [];
-        /** The color to tint the mesh. */
-        this.color = new Color(1, 1, 1, 1);
-        /** The width of the mesh's image. Available only when nonessential data was exported. */
-        this.width = 0;
-        /** The height of the mesh's image. Available only when nonessential data was exported. */
-        this.height = 0;
-        /** The number of entries at the beginning of {@link #vertices} that make up the mesh hull. */
-        this.hullLength = 0;
-        /** Vertex index pairs describing edges for controling triangulation. Mesh triangles will never cross edges. Only available if
-         * nonessential data was exported. Triangulation is not performed at runtime. */
-        this.edges = [];
-        this.parentMesh = null;
-        this.sequence = null;
-        this.tempColor = new Color(0, 0, 0, 0);
         this.path = path;
     }
     /** Calculates {@link #uvs} using the {@link #regionUVs} and region. Must be called if the region, the region's properties, or
@@ -4449,7 +4622,7 @@ class MeshAttachment extends VertexAttachment {
         this.copyTo(copy);
         copy.regionUVs = new Array(this.regionUVs.length);
         Utils.arrayCopy(this.regionUVs, 0, copy.regionUVs, 0, this.regionUVs.length);
-        copy.uvs = new Array(this.uvs.length);
+        copy.uvs = this.uvs instanceof Float32Array ? Utils.newFloatArray(this.uvs.length) : new Array(this.uvs.length);
         Utils.arrayCopy(this.uvs, 0, copy.uvs, 0, this.uvs.length);
         copy.triangles = new Array(this.triangles.length);
         Utils.arrayCopy(this.triangles, 0, copy.triangles, 0, this.triangles.length);
@@ -4484,17 +4657,17 @@ class MeshAttachment extends VertexAttachment {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4507,25 +4680,25 @@ class MeshAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment whose vertices make up a composite Bezier curve.
  *
  * See {@link PathConstraint} and [Paths](http://esotericsoftware.com/spine-paths) in the Spine User Guide. */
 class PathAttachment extends VertexAttachment {
+    /** The lengths along the path in the setup pose from the start of the path to the end of each Bezier curve. */
+    lengths = [];
+    /** If true, the start and end knots are connected. */
+    closed = false;
+    /** If true, additional calculations are performed to make calculating positions along the path more accurate. If false, fewer
+     * calculations are performed but calculating positions along the path is less accurate. */
+    constantSpeed = false;
+    /** The color of the path as it was in Spine. Available only when nonessential data was exported. Paths are not usually
+     * rendered at runtime. */
+    color = new Color(1, 1, 1, 1);
     constructor(name) {
         super(name);
-        /** The lengths along the path in the setup pose from the start of the path to the end of each Bezier curve. */
-        this.lengths = [];
-        /** If true, the start and end knots are connected. */
-        this.closed = false;
-        /** If true, additional calculations are performed to make calculating positions along the path more accurate. If false, fewer
-         * calculations are performed but calculating positions along the path is less accurate. */
-        this.constantSpeed = false;
-        /** The color of the path as it was in Spine. Available only when nonessential data was exported. Paths are not usually
-         * rendered at runtime. */
-        this.color = new Color(1, 1, 1, 1);
     }
     copy() {
         let copy = new PathAttachment(this.name);
@@ -4541,17 +4714,17 @@ class PathAttachment extends VertexAttachment {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4564,8 +4737,8 @@ class PathAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment which is a single point and a rotation. This can be used to spawn projectiles, particles, etc. A bone can be
  * used in similar ways, but a PointAttachment is slightly less expensive to compute and can be hidden, shown, and placed in a
@@ -4573,14 +4746,14 @@ class PathAttachment extends VertexAttachment {
  *
  * See [Point Attachments](http://esotericsoftware.com/spine-point-attachments) in the Spine User Guide. */
 class PointAttachment extends VertexAttachment {
+    x = 0;
+    y = 0;
+    rotation = 0;
+    /** The color of the point attachment as it was in Spine. Available only when nonessential data was exported. Point attachments
+     * are not usually rendered at runtime. */
+    color = new Color(0.38, 0.94, 0, 1);
     constructor(name) {
         super(name);
-        this.x = 0;
-        this.y = 0;
-        this.rotation = 0;
-        /** The color of the point attachment as it was in Spine. Available only when nonessential data was exported. Point attachments
-         * are not usually rendered at runtime. */
-        this.color = new Color(0.38, 0.94, 0, 1);
     }
     computeWorldPosition(bone, point) {
         point.x = this.x * bone.a + this.y * bone.b + bone.worldX;
@@ -4588,10 +4761,10 @@ class PointAttachment extends VertexAttachment {
         return point;
     }
     computeWorldRotation(bone) {
-        let cos = MathUtils.cosDeg(this.rotation), sin = MathUtils.sinDeg(this.rotation);
-        let x = cos * bone.a + sin * bone.b;
-        let y = cos * bone.c + sin * bone.d;
-        return Math.atan2(y, x) * MathUtils.radDeg;
+        const r = this.rotation * MathUtils.degRad, cos = Math.cos(r), sin = Math.sin(r);
+        const x = cos * bone.a + sin * bone.b;
+        const y = cos * bone.c + sin * bone.d;
+        return MathUtils.atan2Deg(y, x);
     }
     copy() {
         let copy = new PointAttachment(this.name);
@@ -4605,17 +4778,17 @@ class PointAttachment extends VertexAttachment {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4628,39 +4801,41 @@ class PointAttachment extends VertexAttachment {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An attachment that displays a textured quadrilateral.
  *
  * See [Region attachments](http://esotericsoftware.com/spine-regions) in the Spine User Guide. */
 class RegionAttachment extends Attachment {
+    /** The local x translation. */
+    x = 0;
+    /** The local y translation. */
+    y = 0;
+    /** The local scaleX. */
+    scaleX = 1;
+    /** The local scaleY. */
+    scaleY = 1;
+    /** The local rotation. */
+    rotation = 0;
+    /** The width of the region attachment in Spine. */
+    width = 0;
+    /** The height of the region attachment in Spine. */
+    height = 0;
+    /** The color to tint the region attachment. */
+    color = new Color(1, 1, 1, 1);
+    /** The name of the texture region for this attachment. */
+    path;
+    region = null;
+    sequence = null;
+    /** For each of the 4 vertices, a pair of <code>x,y</code> values that is the local position of the vertex.
+     *
+     * See {@link #updateOffset()}. */
+    offset = Utils.newFloatArray(8);
+    uvs = Utils.newFloatArray(8);
+    tempColor = new Color(1, 1, 1, 1);
     constructor(name, path) {
         super(name);
-        /** The local x translation. */
-        this.x = 0;
-        /** The local y translation. */
-        this.y = 0;
-        /** The local scaleX. */
-        this.scaleX = 1;
-        /** The local scaleY. */
-        this.scaleY = 1;
-        /** The local rotation. */
-        this.rotation = 0;
-        /** The width of the region attachment in Spine. */
-        this.width = 0;
-        /** The height of the region attachment in Spine. */
-        this.height = 0;
-        /** The color to tint the region attachment. */
-        this.color = new Color(1, 1, 1, 1);
-        this.region = null;
-        this.sequence = null;
-        /** For each of the 4 vertices, a pair of <code>x,y</code> values that is the local position of the vertex.
-         *
-         * See {@link #updateOffset()}. */
-        this.offset = Utils.newFloatArray(8);
-        this.uvs = Utils.newFloatArray(8);
-        this.tempColor = new Color(1, 1, 1, 1);
         this.path = path;
     }
     /** Calculates the {@link #offset} using the region settings. Must be called after changing region settings. */
@@ -4686,7 +4861,7 @@ class RegionAttachment extends Attachment {
         let localY = -this.height / 2 * this.scaleY + this.region.offsetY * regionScaleY;
         let localX2 = localX + this.region.width * regionScaleX;
         let localY2 = localY + this.region.height * regionScaleY;
-        let radians = this.rotation * Math.PI / 180;
+        let radians = this.rotation * MathUtils.degRad;
         let cos = Math.cos(radians);
         let sin = Math.sin(radians);
         let x = this.x, y = this.y;
@@ -4780,53 +4955,53 @@ class RegionAttachment extends Attachment {
         copy.sequence = this.sequence != null ? this.sequence.copy() : null;
         return copy;
     }
+    static X1 = 0;
+    static Y1 = 1;
+    static C1R = 2;
+    static C1G = 3;
+    static C1B = 4;
+    static C1A = 5;
+    static U1 = 6;
+    static V1 = 7;
+    static X2 = 8;
+    static Y2 = 9;
+    static C2R = 10;
+    static C2G = 11;
+    static C2B = 12;
+    static C2A = 13;
+    static U2 = 14;
+    static V2 = 15;
+    static X3 = 16;
+    static Y3 = 17;
+    static C3R = 18;
+    static C3G = 19;
+    static C3B = 20;
+    static C3A = 21;
+    static U3 = 22;
+    static V3 = 23;
+    static X4 = 24;
+    static Y4 = 25;
+    static C4R = 26;
+    static C4G = 27;
+    static C4B = 28;
+    static C4A = 29;
+    static U4 = 30;
+    static V4 = 31;
 }
-RegionAttachment.X1 = 0;
-RegionAttachment.Y1 = 1;
-RegionAttachment.C1R = 2;
-RegionAttachment.C1G = 3;
-RegionAttachment.C1B = 4;
-RegionAttachment.C1A = 5;
-RegionAttachment.U1 = 6;
-RegionAttachment.V1 = 7;
-RegionAttachment.X2 = 8;
-RegionAttachment.Y2 = 9;
-RegionAttachment.C2R = 10;
-RegionAttachment.C2G = 11;
-RegionAttachment.C2B = 12;
-RegionAttachment.C2A = 13;
-RegionAttachment.U2 = 14;
-RegionAttachment.V2 = 15;
-RegionAttachment.X3 = 16;
-RegionAttachment.Y3 = 17;
-RegionAttachment.C3R = 18;
-RegionAttachment.C3G = 19;
-RegionAttachment.C3B = 20;
-RegionAttachment.C3A = 21;
-RegionAttachment.U3 = 22;
-RegionAttachment.V3 = 23;
-RegionAttachment.X4 = 24;
-RegionAttachment.Y4 = 25;
-RegionAttachment.C4R = 26;
-RegionAttachment.C4G = 27;
-RegionAttachment.C4B = 28;
-RegionAttachment.C4A = 29;
-RegionAttachment.U4 = 30;
-RegionAttachment.V4 = 31;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4839,14 +5014,15 @@ RegionAttachment.V4 = 31;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** An {@link AttachmentLoader} that configures attachments using texture regions from an {@link TextureAtlas}.
  *
  * See [Loading skeleton data](http://esotericsoftware.com/spine-loading-skeleton-data#JSON-and-binary-data) in the
  * Spine Runtimes Guide. */
 class AtlasAttachmentLoader {
+    atlas;
     constructor(atlas) {
         this.atlas = atlas;
     }
@@ -4902,17 +5078,17 @@ class AtlasAttachmentLoader {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -4925,41 +5101,47 @@ class AtlasAttachmentLoader {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link Bone}. */
 class BoneData {
+    /** The index of the bone in {@link Skeleton#getBones()}. */
+    index = 0;
+    /** The name of the bone, which is unique across all bones in the skeleton. */
+    name;
+    /** @returns May be null. */
+    parent = null;
+    /** The bone's length. */
+    length = 0;
+    /** The local x translation. */
+    x = 0;
+    /** The local y translation. */
+    y = 0;
+    /** The local rotation in degrees, counter clockwise. */
+    rotation = 0;
+    /** The local scaleX. */
+    scaleX = 1;
+    /** The local scaleY. */
+    scaleY = 1;
+    /** The local shearX. */
+    shearX = 0;
+    /** The local shearX. */
+    shearY = 0;
+    /** The transform mode for how parent world transforms affect this bone. */
+    inherit = Inherit.Normal;
+    /** When true, {@link Skeleton#updateWorldTransform()} only updates this bone if the {@link Skeleton#skin} contains this
+      * bone.
+      * @see Skin#bones */
+    skinRequired = false;
+    /** The color of the bone as it was in Spine. Available only when nonessential data was exported. Bones are not usually
+     * rendered at runtime. */
+    color = new Color();
+    /** The bone icon as it was in Spine, or null if nonessential data was not exported. */
+    icon;
+    /** False if the bone was hidden in Spine and nonessential data was exported. Does not affect runtime rendering. */
+    visible = false;
     constructor(index, name, parent) {
-        /** The index of the bone in {@link Skeleton#getBones()}. */
-        this.index = 0;
-        /** @returns May be null. */
-        this.parent = null;
-        /** The bone's length. */
-        this.length = 0;
-        /** The local x translation. */
-        this.x = 0;
-        /** The local y translation. */
-        this.y = 0;
-        /** The local rotation. */
-        this.rotation = 0;
-        /** The local scaleX. */
-        this.scaleX = 1;
-        /** The local scaleY. */
-        this.scaleY = 1;
-        /** The local shearX. */
-        this.shearX = 0;
-        /** The local shearX. */
-        this.shearY = 0;
-        /** The transform mode for how parent world transforms affect this bone. */
-        this.transformMode = TransformMode.Normal;
-        /** When true, {@link Skeleton#updateWorldTransform()} only updates this bone if the {@link Skeleton#skin} contains this
-          * bone.
-          * @see Skin#bones */
-        this.skinRequired = false;
-        /** The color of the bone as it was in Spine. Available only when nonessential data was exported. Bones are not usually
-         * rendered at runtime. */
-        this.color = new Color();
         if (index < 0)
             throw new Error("index must be >= 0.");
         if (!name)
@@ -4970,28 +5152,28 @@ class BoneData {
     }
 }
 /** Determines how a bone inherits world transforms from parent bones. */
-var TransformMode;
-(function (TransformMode) {
-    TransformMode[TransformMode["Normal"] = 0] = "Normal";
-    TransformMode[TransformMode["OnlyTranslation"] = 1] = "OnlyTranslation";
-    TransformMode[TransformMode["NoRotationOrReflection"] = 2] = "NoRotationOrReflection";
-    TransformMode[TransformMode["NoScale"] = 3] = "NoScale";
-    TransformMode[TransformMode["NoScaleOrReflection"] = 4] = "NoScaleOrReflection";
-})(TransformMode || (TransformMode = {}));
+var Inherit;
+(function (Inherit) {
+    Inherit[Inherit["Normal"] = 0] = "Normal";
+    Inherit[Inherit["OnlyTranslation"] = 1] = "OnlyTranslation";
+    Inherit[Inherit["NoRotationOrReflection"] = 2] = "NoRotationOrReflection";
+    Inherit[Inherit["NoScale"] = 3] = "NoScale";
+    Inherit[Inherit["NoScaleOrReflection"] = 4] = "NoScaleOrReflection";
+})(Inherit || (Inherit = {}));
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -5004,8 +5186,8 @@ var TransformMode;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores a bone's current pose.
  *
@@ -5013,54 +5195,59 @@ var TransformMode;
  * local transform that can be applied to compute the world transform. The local transform and applied transform may differ if a
  * constraint or application code modifies the world transform after it was computed from the local transform. */
 class Bone {
+    /** The bone's setup pose data. */
+    data;
+    /** The skeleton this bone belongs to. */
+    skeleton;
+    /** The parent bone, or null if this is the root bone. */
+    parent = null;
+    /** The immediate children of this bone. */
+    children = new Array();
+    /** The local x translation. */
+    x = 0;
+    /** The local y translation. */
+    y = 0;
+    /** The local rotation in degrees, counter clockwise. */
+    rotation = 0;
+    /** The local scaleX. */
+    scaleX = 0;
+    /** The local scaleY. */
+    scaleY = 0;
+    /** The local shearX. */
+    shearX = 0;
+    /** The local shearY. */
+    shearY = 0;
+    /** The applied local x translation. */
+    ax = 0;
+    /** The applied local y translation. */
+    ay = 0;
+    /** The applied local rotation in degrees, counter clockwise. */
+    arotation = 0;
+    /** The applied local scaleX. */
+    ascaleX = 0;
+    /** The applied local scaleY. */
+    ascaleY = 0;
+    /** The applied local shearX. */
+    ashearX = 0;
+    /** The applied local shearY. */
+    ashearY = 0;
+    /** Part of the world transform matrix for the X axis. If changed, {@link #updateAppliedTransform()} should be called. */
+    a = 0;
+    /** Part of the world transform matrix for the Y axis. If changed, {@link #updateAppliedTransform()} should be called. */
+    b = 0;
+    /** Part of the world transform matrix for the X axis. If changed, {@link #updateAppliedTransform()} should be called. */
+    c = 0;
+    /** Part of the world transform matrix for the Y axis. If changed, {@link #updateAppliedTransform()} should be called. */
+    d = 0;
+    /** The world X position. If changed, {@link #updateAppliedTransform()} should be called. */
+    worldY = 0;
+    /** The world Y position. If changed, {@link #updateAppliedTransform()} should be called. */
+    worldX = 0;
+    inherit = Inherit.Normal;
+    sorted = false;
+    active = false;
     /** @param parent May be null. */
     constructor(data, skeleton, parent) {
-        /** The parent bone, or null if this is the root bone. */
-        this.parent = null;
-        /** The immediate children of this bone. */
-        this.children = new Array();
-        /** The local x translation. */
-        this.x = 0;
-        /** The local y translation. */
-        this.y = 0;
-        /** The local rotation in degrees, counter clockwise. */
-        this.rotation = 0;
-        /** The local scaleX. */
-        this.scaleX = 0;
-        /** The local scaleY. */
-        this.scaleY = 0;
-        /** The local shearX. */
-        this.shearX = 0;
-        /** The local shearY. */
-        this.shearY = 0;
-        /** The applied local x translation. */
-        this.ax = 0;
-        /** The applied local y translation. */
-        this.ay = 0;
-        /** The applied local rotation in degrees, counter clockwise. */
-        this.arotation = 0;
-        /** The applied local scaleX. */
-        this.ascaleX = 0;
-        /** The applied local scaleY. */
-        this.ascaleY = 0;
-        /** The applied local shearX. */
-        this.ashearX = 0;
-        /** The applied local shearY. */
-        this.ashearY = 0;
-        /** Part of the world transform matrix for the X axis. If changed, {@link #updateAppliedTransform()} should be called. */
-        this.a = 0;
-        /** Part of the world transform matrix for the Y axis. If changed, {@link #updateAppliedTransform()} should be called. */
-        this.b = 0;
-        /** Part of the world transform matrix for the X axis. If changed, {@link #updateAppliedTransform()} should be called. */
-        this.c = 0;
-        /** Part of the world transform matrix for the Y axis. If changed, {@link #updateAppliedTransform()} should be called. */
-        this.d = 0;
-        /** The world X position. If changed, {@link #updateAppliedTransform()} should be called. */
-        this.worldY = 0;
-        /** The world Y position. If changed, {@link #updateAppliedTransform()} should be called. */
-        this.worldX = 0;
-        this.sorted = false;
-        this.active = false;
         if (!data)
             throw new Error("data cannot be null.");
         if (!skeleton)
@@ -5076,7 +5263,7 @@ class Bone {
         return this.active;
     }
     /** Computes the world transform using the parent bone and this bone's local applied transform. */
-    update() {
+    update(physics) {
         this.updateWorldTransformWith(this.ax, this.ay, this.arotation, this.ascaleX, this.ascaleY, this.ashearX, this.ashearY);
     }
     /** Computes the world transform using the parent bone and this bone's local transform.
@@ -5101,13 +5288,13 @@ class Bone {
         let parent = this.parent;
         if (!parent) { // Root bone.
             let skeleton = this.skeleton;
-            let rotationY = rotation + 90 + shearY;
-            let sx = skeleton.scaleX;
-            let sy = skeleton.scaleY;
-            this.a = MathUtils.cosDeg(rotation + shearX) * scaleX * sx;
-            this.b = MathUtils.cosDeg(rotationY) * scaleY * sx;
-            this.c = MathUtils.sinDeg(rotation + shearX) * scaleX * sy;
-            this.d = MathUtils.sinDeg(rotationY) * scaleY * sy;
+            const sx = skeleton.scaleX, sy = skeleton.scaleY;
+            const rx = (rotation + shearX) * MathUtils.degRad;
+            const ry = (rotation + 90 + shearY) * MathUtils.degRad;
+            this.a = Math.cos(rx) * scaleX * sx;
+            this.b = Math.cos(ry) * scaleY * sx;
+            this.c = Math.sin(rx) * scaleX * sy;
+            this.d = Math.sin(ry) * scaleY * sy;
             this.worldX = x * sx + skeleton.x;
             this.worldY = y * sy + skeleton.y;
             return;
@@ -5115,34 +5302,37 @@ class Bone {
         let pa = parent.a, pb = parent.b, pc = parent.c, pd = parent.d;
         this.worldX = pa * x + pb * y + parent.worldX;
         this.worldY = pc * x + pd * y + parent.worldY;
-        switch (this.data.transformMode) {
-            case TransformMode.Normal: {
-                let rotationY = rotation + 90 + shearY;
-                let la = MathUtils.cosDeg(rotation + shearX) * scaleX;
-                let lb = MathUtils.cosDeg(rotationY) * scaleY;
-                let lc = MathUtils.sinDeg(rotation + shearX) * scaleX;
-                let ld = MathUtils.sinDeg(rotationY) * scaleY;
+        switch (this.inherit) {
+            case Inherit.Normal: {
+                const rx = (rotation + shearX) * MathUtils.degRad;
+                const ry = (rotation + 90 + shearY) * MathUtils.degRad;
+                const la = Math.cos(rx) * scaleX;
+                const lb = Math.cos(ry) * scaleY;
+                const lc = Math.sin(rx) * scaleX;
+                const ld = Math.sin(ry) * scaleY;
                 this.a = pa * la + pb * lc;
                 this.b = pa * lb + pb * ld;
                 this.c = pc * la + pd * lc;
                 this.d = pc * lb + pd * ld;
                 return;
             }
-            case TransformMode.OnlyTranslation: {
-                let rotationY = rotation + 90 + shearY;
-                this.a = MathUtils.cosDeg(rotation + shearX) * scaleX;
-                this.b = MathUtils.cosDeg(rotationY) * scaleY;
-                this.c = MathUtils.sinDeg(rotation + shearX) * scaleX;
-                this.d = MathUtils.sinDeg(rotationY) * scaleY;
+            case Inherit.OnlyTranslation: {
+                const rx = (rotation + shearX) * MathUtils.degRad;
+                const ry = (rotation + 90 + shearY) * MathUtils.degRad;
+                this.a = Math.cos(rx) * scaleX;
+                this.b = Math.cos(ry) * scaleY;
+                this.c = Math.sin(rx) * scaleX;
+                this.d = Math.sin(ry) * scaleY;
                 break;
             }
-            case TransformMode.NoRotationOrReflection: {
+            case Inherit.NoRotationOrReflection: {
+                let sx = 1 / this.skeleton.scaleX, sy = 1 / this.skeleton.scaleY;
+                pa *= sx;
+                pc *= sy;
                 let s = pa * pa + pc * pc;
                 let prx = 0;
                 if (s > 0.0001) {
-                    s = Math.abs(pa * pd - pb * pc) / s;
-                    pa /= this.skeleton.scaleX;
-                    pc /= this.skeleton.scaleY;
+                    s = Math.abs(pa * pd * sy - pb * sx * pc) / s;
                     pb = pc * s;
                     pd = pa * s;
                     prx = Math.atan2(pc, pa) * MathUtils.radDeg;
@@ -5152,22 +5342,22 @@ class Bone {
                     pc = 0;
                     prx = 90 - Math.atan2(pd, pb) * MathUtils.radDeg;
                 }
-                let rx = rotation + shearX - prx;
-                let ry = rotation + shearY - prx + 90;
-                let la = MathUtils.cosDeg(rx) * scaleX;
-                let lb = MathUtils.cosDeg(ry) * scaleY;
-                let lc = MathUtils.sinDeg(rx) * scaleX;
-                let ld = MathUtils.sinDeg(ry) * scaleY;
+                const rx = (rotation + shearX - prx) * MathUtils.degRad;
+                const ry = (rotation + shearY - prx + 90) * MathUtils.degRad;
+                const la = Math.cos(rx) * scaleX;
+                const lb = Math.cos(ry) * scaleY;
+                const lc = Math.sin(rx) * scaleX;
+                const ld = Math.sin(ry) * scaleY;
                 this.a = pa * la - pb * lc;
                 this.b = pa * lb - pb * ld;
                 this.c = pc * la + pd * lc;
                 this.d = pc * lb + pd * ld;
                 break;
             }
-            case TransformMode.NoScale:
-            case TransformMode.NoScaleOrReflection: {
-                let cos = MathUtils.cosDeg(rotation);
-                let sin = MathUtils.sinDeg(rotation);
+            case Inherit.NoScale:
+            case Inherit.NoScaleOrReflection: {
+                rotation *= MathUtils.degRad;
+                const cos = Math.cos(rotation), sin = Math.sin(rotation);
                 let za = (pa * cos + pb * sin) / this.skeleton.scaleX;
                 let zc = (pc * cos + pd * sin) / this.skeleton.scaleY;
                 let s = Math.sqrt(za * za + zc * zc);
@@ -5176,16 +5366,18 @@ class Bone {
                 za *= s;
                 zc *= s;
                 s = Math.sqrt(za * za + zc * zc);
-                if (this.data.transformMode == TransformMode.NoScale
+                if (this.inherit == Inherit.NoScale
                     && (pa * pd - pb * pc < 0) != (this.skeleton.scaleX < 0 != this.skeleton.scaleY < 0))
                     s = -s;
-                let r = Math.PI / 2 + Math.atan2(zc, za);
-                let zb = Math.cos(r) * s;
-                let zd = Math.sin(r) * s;
-                let la = MathUtils.cosDeg(shearX) * scaleX;
-                let lb = MathUtils.cosDeg(90 + shearY) * scaleY;
-                let lc = MathUtils.sinDeg(shearX) * scaleX;
-                let ld = MathUtils.sinDeg(90 + shearY) * scaleY;
+                rotation = Math.PI / 2 + Math.atan2(zc, za);
+                const zb = Math.cos(rotation) * s;
+                const zd = Math.sin(rotation) * s;
+                shearX *= MathUtils.degRad;
+                shearY = (90 + shearY) * MathUtils.degRad;
+                const la = Math.cos(shearX) * scaleX;
+                const lb = Math.cos(shearY) * scaleY;
+                const lc = Math.sin(shearX) * scaleX;
+                const ld = Math.sin(shearY) * scaleY;
                 this.a = za * la + zb * lc;
                 this.b = za * lb + zb * ld;
                 this.c = zc * la + zd * lc;
@@ -5208,22 +5400,7 @@ class Bone {
         this.scaleY = data.scaleY;
         this.shearX = data.shearX;
         this.shearY = data.shearY;
-    }
-    /** The world rotation for the X axis, calculated using {@link #a} and {@link #c}. */
-    getWorldRotationX() {
-        return Math.atan2(this.c, this.a) * MathUtils.radDeg;
-    }
-    /** The world rotation for the Y axis, calculated using {@link #b} and {@link #d}. */
-    getWorldRotationY() {
-        return Math.atan2(this.d, this.b) * MathUtils.radDeg;
-    }
-    /** The magnitude (always positive) of the world scale X, calculated using {@link #a} and {@link #c}. */
-    getWorldScaleX() {
-        return Math.sqrt(this.a * this.a + this.c * this.c);
-    }
-    /** The magnitude (always positive) of the world scale Y, calculated using {@link #b} and {@link #d}. */
-    getWorldScaleY() {
-        return Math.sqrt(this.b * this.b + this.d * this.d);
+        this.inherit = data.inherit;
     }
     /** Computes the applied transform values from the world transform.
      *
@@ -5252,27 +5429,25 @@ class Bone {
         this.ax = (dx * ia - dy * ib);
         this.ay = (dy * id - dx * ic);
         let ra, rb, rc, rd;
-        if (this.data.transformMode == TransformMode.OnlyTranslation) {
+        if (this.inherit == Inherit.OnlyTranslation) {
             ra = this.a;
             rb = this.b;
             rc = this.c;
             rd = this.d;
         }
         else {
-            switch (this.data.transformMode) {
-                case TransformMode.NoRotationOrReflection: {
+            switch (this.inherit) {
+                case Inherit.NoRotationOrReflection: {
                     let s = Math.abs(pa * pd - pb * pc) / (pa * pa + pc * pc);
-                    let sa = pa / this.skeleton.scaleX;
-                    let sc = pc / this.skeleton.scaleY;
-                    pb = -sc * s * this.skeleton.scaleX;
-                    pd = sa * s * this.skeleton.scaleY;
+                    pb = -pc * this.skeleton.scaleX * s / this.skeleton.scaleY;
+                    pd = pa * this.skeleton.scaleY * s / this.skeleton.scaleX;
                     pid = 1 / (pa * pd - pb * pc);
                     ia = pd * pid;
                     ib = pb * pid;
                     break;
                 }
-                case TransformMode.NoScale:
-                case TransformMode.NoScaleOrReflection:
+                case Inherit.NoScale:
+                case Inherit.NoScaleOrReflection:
                     let cos = MathUtils.cosDeg(this.rotation), sin = MathUtils.sinDeg(this.rotation);
                     pa = (pa * cos + pb * sin) / this.skeleton.scaleX;
                     pc = (pc * cos + pd * sin) / this.skeleton.scaleY;
@@ -5282,7 +5457,7 @@ class Bone {
                     pa *= s;
                     pc *= s;
                     s = Math.sqrt(pa * pa + pc * pc);
-                    if (this.data.transformMode == TransformMode.NoScale && pid < 0 != (this.skeleton.scaleX < 0 != this.skeleton.scaleY < 0))
+                    if (this.inherit == Inherit.NoScale && pid < 0 != (this.skeleton.scaleX < 0 != this.skeleton.scaleY < 0))
                         s = -s;
                     let r = MathUtils.PI / 2 + Math.atan2(pc, pa);
                     pb = Math.cos(r) * s;
@@ -5313,6 +5488,22 @@ class Bone {
             this.arotation = 90 - Math.atan2(rd, rb) * MathUtils.radDeg;
         }
     }
+    /** The world rotation for the X axis, calculated using {@link #a} and {@link #c}. */
+    getWorldRotationX() {
+        return Math.atan2(this.c, this.a) * MathUtils.radDeg;
+    }
+    /** The world rotation for the Y axis, calculated using {@link #b} and {@link #d}. */
+    getWorldRotationY() {
+        return Math.atan2(this.d, this.b) * MathUtils.radDeg;
+    }
+    /** The magnitude (always positive) of the world scale X, calculated using {@link #a} and {@link #c}. */
+    getWorldScaleX() {
+        return Math.sqrt(this.a * this.a + this.c * this.c);
+    }
+    /** The magnitude (always positive) of the world scale Y, calculated using {@link #b} and {@link #d}. */
+    getWorldScaleY() {
+        return Math.sqrt(this.b * this.b + this.d * this.d);
+    }
     /** Transforms a point from world coordinates to the bone's local coordinates. */
     worldToLocal(world) {
         let invDet = 1 / (this.a * this.d - this.b * this.c);
@@ -5328,6 +5519,18 @@ class Bone {
         local.y = x * this.c + y * this.d + this.worldY;
         return local;
     }
+    /** Transforms a point from world coordinates to the parent bone's local coordinates. */
+    worldToParent(world) {
+        if (world == null)
+            throw new Error("world cannot be null.");
+        return this.parent == null ? world : this.parent.worldToLocal(world);
+    }
+    /** Transforms a point from the parent bone's coordinates to world coordinates. */
+    parentToWorld(world) {
+        if (world == null)
+            throw new Error("world cannot be null.");
+        return this.parent == null ? world : this.parent.localToWorld(world);
+    }
     /** Transforms a world rotation to a local rotation. */
     worldToLocalRotation(worldRotation) {
         let sin = MathUtils.sinDeg(worldRotation), cos = MathUtils.cosDeg(worldRotation);
@@ -5341,31 +5544,32 @@ class Bone {
     }
     /** Rotates the world transform the specified amount.
      * <p>
-     * After changes are made to the world transform, {@link #updateAppliedTransform()} should be called and {@link #update()} will
-     * need to be called on any child bones, recursively. */
+     * After changes are made to the world transform, {@link #updateAppliedTransform()} should be called and
+     * {@link #update(Physics)} will need to be called on any child bones, recursively. */
     rotateWorld(degrees) {
-        let a = this.a, b = this.b, c = this.c, d = this.d;
-        let cos = MathUtils.cosDeg(degrees), sin = MathUtils.sinDeg(degrees);
-        this.a = cos * a - sin * c;
-        this.b = cos * b - sin * d;
-        this.c = sin * a + cos * c;
-        this.d = sin * b + cos * d;
+        degrees *= MathUtils.degRad;
+        const sin = Math.sin(degrees), cos = Math.cos(degrees);
+        const ra = this.a, rb = this.b;
+        this.a = cos * ra - sin * this.c;
+        this.b = cos * rb - sin * this.d;
+        this.c = sin * ra + cos * this.c;
+        this.d = sin * rb + cos * this.d;
     }
 }
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -5378,11 +5582,14 @@ class Bone {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** The base class for all constraint datas. */
 class ConstraintData {
+    name;
+    order;
+    skinRequired;
     constructor(name, order, skinRequired) {
         this.name = name;
         this.order = order;
@@ -5392,17 +5599,17 @@ class ConstraintData {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -5415,19 +5622,22 @@ class ConstraintData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class AssetManagerBase {
-    constructor(textureLoader, pathPrefix = "", downloader = new Downloader()) {
-        this.pathPrefix = "";
-        this.assets = {};
-        this.errors = {};
-        this.toLoad = 0;
-        this.loaded = 0;
+    pathPrefix = "";
+    textureLoader;
+    downloader;
+    cache;
+    errors = {};
+    toLoad = 0;
+    loaded = 0;
+    constructor(textureLoader, pathPrefix = "", downloader = new Downloader(), cache = new AssetCache()) {
         this.textureLoader = textureLoader;
         this.pathPrefix = pathPrefix;
         this.downloader = downloader;
+        this.cache = cache;
     }
     start(path) {
         this.toLoad++;
@@ -5436,7 +5646,8 @@ class AssetManagerBase {
     success(callback, path, asset) {
         this.toLoad--;
         this.loaded++;
-        this.assets[path] = asset;
+        this.cache.assets[path] = asset;
+        this.cache.assetsRefCount[path] = (this.cache.assetsRefCount[path] || 0) + 1;
         if (callback)
             callback(path, asset);
     }
@@ -5468,10 +5679,17 @@ class AssetManagerBase {
     }
     loadBinary(path, success = () => { }, error = () => { }) {
         path = this.start(path);
-        this.downloader.downloadBinary(path, (data) => {
-            this.success(success, path, data);
-        }, (status, responseText) => {
-            this.error(error, path, `Couldn't load binary ${path}: status ${status}, ${responseText}`);
+        if (this.reuseAssets(path, success, error))
+            return;
+        this.cache.assetsLoaded[path] = new Promise((resolve, reject) => {
+            this.downloader.downloadBinary(path, (data) => {
+                this.success(success, path, data);
+                resolve(data);
+            }, (status, responseText) => {
+                const errorMsg = `Couldn't load binary ${path}: status ${status}, ${responseText}`;
+                this.error(error, path, errorMsg);
+                reject(errorMsg);
+            });
         });
     }
     loadText(path, success = () => { }, error = () => { }) {
@@ -5484,78 +5702,179 @@ class AssetManagerBase {
     }
     loadJson(path, success = () => { }, error = () => { }) {
         path = this.start(path);
-        this.downloader.downloadJson(path, (data) => {
-            this.success(success, path, data);
-        }, (status, responseText) => {
-            this.error(error, path, `Couldn't load JSON ${path}: status ${status}, ${responseText}`);
+        if (this.reuseAssets(path, success, error))
+            return;
+        this.cache.assetsLoaded[path] = new Promise((resolve, reject) => {
+            this.downloader.downloadJson(path, (data) => {
+                this.success(success, path, data);
+                resolve(data);
+            }, (status, responseText) => {
+                const errorMsg = `Couldn't load JSON ${path}: status ${status}, ${responseText}`;
+                this.error(error, path, errorMsg);
+                reject(errorMsg);
+            });
         });
+    }
+    reuseAssets(path, success = () => { }, error = () => { }) {
+        const loadedStatus = this.cache.assetsLoaded[path];
+        const alreadyExistsOrLoading = loadedStatus !== undefined;
+        if (alreadyExistsOrLoading) {
+            this.cache.assetsLoaded[path] = loadedStatus
+                .then(data => {
+                // necessary when user preloads an image into the cache.
+                // texture loader is not avaiable in the cache, so we transform in GLTexture at first use
+                data = (data instanceof Image || data instanceof ImageBitmap) ? this.textureLoader(data) : data;
+                this.success(success, path, data);
+                return data;
+            })
+                .catch(errorMsg => this.error(error, path, errorMsg));
+        }
+        return alreadyExistsOrLoading;
     }
     loadTexture(path, success = () => { }, error = () => { }) {
         path = this.start(path);
-        let isBrowser = !!(typeof window !== 'undefined' && typeof navigator !== 'undefined' && window.document);
-        let isWebWorker = !isBrowser; // && typeof importScripts !== 'undefined';
-        if (isWebWorker) {
-            fetch(path, { mode: "cors" }).then((response) => {
-                if (response.ok)
-                    return response.blob();
-                this.error(error, path, `Couldn't load image: ${path}`);
-                return null;
-            }).then((blob) => {
-                return blob ? createImageBitmap(blob, { premultiplyAlpha: "none", colorSpaceConversion: "none" }) : null;
-            }).then((bitmap) => {
-                if (bitmap)
-                    this.success(success, path, this.textureLoader(bitmap));
-            });
-        }
-        else {
-            let image = new Image();
-            image.crossOrigin = "anonymous";
-            image.onload = () => {
-                this.success(success, path, this.textureLoader(image));
-            };
-            image.onerror = () => {
-                this.error(error, path, `Couldn't load image: ${path}`);
-            };
-            if (this.downloader.rawDataUris[path])
-                path = this.downloader.rawDataUris[path];
-            image.src = path;
-        }
+        if (this.reuseAssets(path, success, error))
+            return;
+        this.cache.assetsLoaded[path] = new Promise((resolve, reject) => {
+            let isBrowser = !!(typeof window !== 'undefined' && typeof navigator !== 'undefined' && window.document);
+            let isWebWorker = !isBrowser; // && typeof importScripts !== 'undefined';
+            if (isWebWorker) {
+                fetch(path, { mode: "cors" }).then((response) => {
+                    if (response.ok)
+                        return response.blob();
+                    const errorMsg = `Couldn't load image: ${path}`;
+                    this.error(error, path, `Couldn't load image: ${path}`);
+                    reject(errorMsg);
+                }).then((blob) => {
+                    return blob ? createImageBitmap(blob, { premultiplyAlpha: "none", colorSpaceConversion: "none" }) : null;
+                }).then((bitmap) => {
+                    if (bitmap) {
+                        const texture = this.textureLoader(bitmap);
+                        this.success(success, path, texture);
+                        resolve(texture);
+                    }
+                    ;
+                });
+            }
+            else {
+                let image = new Image();
+                image.crossOrigin = "anonymous";
+                image.onload = () => {
+                    const texture = this.textureLoader(image);
+                    this.success(success, path, texture);
+                    resolve(texture);
+                };
+                image.onerror = () => {
+                    const errorMsg = `Couldn't load image: ${path}`;
+                    this.error(error, path, errorMsg);
+                    reject(errorMsg);
+                };
+                if (this.downloader.rawDataUris[path])
+                    path = this.downloader.rawDataUris[path];
+                image.src = path;
+            }
+        });
     }
     loadTextureAtlas(path, success = () => { }, error = () => { }, fileAlias) {
         let index = path.lastIndexOf("/");
         let parent = index >= 0 ? path.substring(0, index + 1) : "";
         path = this.start(path);
-        this.downloader.downloadText(path, (atlasText) => {
-            try {
-                let atlas = new TextureAtlas(atlasText);
-                let toLoad = atlas.pages.length, abort = false;
-                for (let page of atlas.pages) {
-                    this.loadTexture(!fileAlias ? parent + page.name : fileAlias[page.name], (imagePath, texture) => {
-                        if (!abort) {
-                            page.setTexture(texture);
-                            if (--toLoad == 0)
-                                this.success(success, path, atlas);
-                        }
-                    }, (imagePath, message) => {
-                        if (!abort)
-                            this.error(error, path, `Couldn't load texture atlas ${path} page image: ${imagePath}`);
-                        abort = true;
-                    });
+        if (this.reuseAssets(path, success, error))
+            return;
+        this.cache.assetsLoaded[path] = new Promise((resolve, reject) => {
+            this.downloader.downloadText(path, (atlasText) => {
+                try {
+                    let atlas = new TextureAtlas(atlasText);
+                    let toLoad = atlas.pages.length, abort = false;
+                    for (let page of atlas.pages) {
+                        this.loadTexture(!fileAlias ? parent + page.name : fileAlias[page.name], (imagePath, texture) => {
+                            if (!abort) {
+                                page.setTexture(texture);
+                                if (--toLoad == 0) {
+                                    this.success(success, path, atlas);
+                                    resolve(atlas);
+                                }
+                            }
+                        }, (imagePath, message) => {
+                            if (!abort) {
+                                const errorMsg = `Couldn't load texture ${path} page image: ${imagePath}`;
+                                this.error(error, path, errorMsg);
+                                reject(errorMsg);
+                            }
+                            abort = true;
+                        });
+                    }
                 }
-            }
-            catch (e) {
-                this.error(error, path, `Couldn't parse texture atlas ${path}: ${e.message}`);
-            }
-        }, (status, responseText) => {
-            this.error(error, path, `Couldn't load texture atlas ${path}: status ${status}, ${responseText}`);
+                catch (e) {
+                    const errorMsg = `Couldn't parse texture atlas ${path}: ${e.message}`;
+                    this.error(error, path, errorMsg);
+                    reject(errorMsg);
+                }
+            }, (status, responseText) => {
+                const errorMsg = `Couldn't load texture atlas ${path}: status ${status}, ${responseText}`;
+                this.error(error, path, errorMsg);
+                reject(errorMsg);
+            });
         });
     }
+    loadTextureAtlasButNoTextures(path, success = () => { }, error = () => { }, fileAlias) {
+        path = this.start(path);
+        if (this.reuseAssets(path, success, error))
+            return;
+        this.cache.assetsLoaded[path] = new Promise((resolve, reject) => {
+            this.downloader.downloadText(path, (atlasText) => {
+                try {
+                    const atlas = new TextureAtlas(atlasText);
+                    this.success(success, path, atlas);
+                    resolve(atlas);
+                }
+                catch (e) {
+                    const errorMsg = `Couldn't parse texture atlas ${path}: ${e.message}`;
+                    this.error(error, path, errorMsg);
+                    reject(errorMsg);
+                }
+            }, (status, responseText) => {
+                const errorMsg = `Couldn't load texture atlas ${path}: status ${status}, ${responseText}`;
+                this.error(error, path, errorMsg);
+                reject(errorMsg);
+            });
+        });
+    }
+    // Promisified versions of load function
+    async loadBinaryAsync(path) {
+        return new Promise((resolve, reject) => {
+            this.loadBinary(path, (_, binary) => resolve(binary), (_, message) => reject(message));
+        });
+    }
+    async loadJsonAsync(path) {
+        return new Promise((resolve, reject) => {
+            this.loadJson(path, (_, object) => resolve(object), (_, message) => reject(message));
+        });
+    }
+    async loadTextureAsync(path) {
+        return new Promise((resolve, reject) => {
+            this.loadTexture(path, (_, texture) => resolve(texture), (_, message) => reject(message));
+        });
+    }
+    async loadTextureAtlasAsync(path) {
+        return new Promise((resolve, reject) => {
+            this.loadTextureAtlas(path, (_, atlas) => resolve(atlas), (_, message) => reject(message));
+        });
+    }
+    async loadTextureAtlasButNoTexturesAsync(path) {
+        return new Promise((resolve, reject) => {
+            this.loadTextureAtlasButNoTextures(path, (_, atlas) => resolve(atlas), (_, message) => reject(message));
+        });
+    }
+    setCache(cache) {
+        this.cache = cache;
+    }
     get(path) {
-        return this.assets[this.pathPrefix + path];
+        return this.cache.assets[this.pathPrefix + path];
     }
     require(path) {
         path = this.pathPrefix + path;
-        let asset = this.assets[path];
+        let asset = this.cache.assets[path];
         if (asset)
             return asset;
         let error = this.errors[path];
@@ -5563,19 +5882,23 @@ class AssetManagerBase {
     }
     remove(path) {
         path = this.pathPrefix + path;
-        let asset = this.assets[path];
+        let asset = this.cache.assets[path];
         if (asset.dispose)
             asset.dispose();
-        delete this.assets[path];
+        delete this.cache.assets[path];
+        delete this.cache.assetsRefCount[path];
+        delete this.cache.assetsLoaded[path];
         return asset;
     }
     removeAll() {
-        for (let key in this.assets) {
-            let asset = this.assets[key];
+        for (let path in this.cache.assets) {
+            let asset = this.cache.assets[path];
             if (asset.dispose)
                 asset.dispose();
         }
-        this.assets = {};
+        this.cache.assets = {};
+        this.cache.assetsLoaded = {};
+        this.cache.assetsRefCount = {};
     }
     isLoadingComplete() {
         return this.toLoad == 0;
@@ -5589,6 +5912,12 @@ class AssetManagerBase {
     dispose() {
         this.removeAll();
     }
+    // dispose asset only if it's not used by others
+    disposeAsset(path) {
+        if (--this.cache.assetsRefCount[path] === 0) {
+            this.remove(path);
+        }
+    }
     hasErrors() {
         return Object.keys(this.errors).length > 0;
     }
@@ -5596,11 +5925,27 @@ class AssetManagerBase {
         return this.errors;
     }
 }
-class Downloader {
-    constructor() {
-        this.callbacks = {};
-        this.rawDataUris = {};
+class AssetCache {
+    assets = {};
+    assetsRefCount = {};
+    assetsLoaded = {};
+    static AVAILABLE_CACHES = new Map();
+    static getCache(id) {
+        const cache = AssetCache.AVAILABLE_CACHES.get(id);
+        if (cache)
+            return cache;
+        const newCache = new AssetCache();
+        AssetCache.AVAILABLE_CACHES.set(id, newCache);
+        return newCache;
     }
+    async addAsset(path, asset) {
+        this.assetsLoaded[path] = Promise.resolve(asset);
+        this.assets[path] = await asset;
+    }
+}
+class Downloader {
+    callbacks = {};
+    rawDataUris = {};
     dataUriToString(dataUri) {
         if (!dataUri.startsWith("data:")) {
             throw new Error("Not a data URI.");
@@ -5636,10 +5981,11 @@ class Downloader {
     downloadText(url, success, error) {
         if (this.start(url, success, error))
             return;
-        if (this.rawDataUris[url]) {
+        const rawDataUri = this.rawDataUris[url];
+        // we assume if a "." is included in a raw data uri, it is used to rewrite an asset URL
+        if (rawDataUri && !rawDataUri.includes(".")) {
             try {
-                let dataUri = this.rawDataUris[url];
-                this.finish(url, 200, this.dataUriToString(dataUri));
+                this.finish(url, 200, this.dataUriToString(rawDataUri));
             }
             catch (e) {
                 this.finish(url, 400, JSON.stringify(e));
@@ -5648,7 +5994,7 @@ class Downloader {
         }
         let request = new XMLHttpRequest();
         request.overrideMimeType("text/html");
-        request.open("GET", url, true);
+        request.open("GET", rawDataUri ? rawDataUri : url, true);
         let done = () => {
             this.finish(url, request.status, request.responseText);
         };
@@ -5664,10 +6010,11 @@ class Downloader {
     downloadBinary(url, success, error) {
         if (this.start(url, success, error))
             return;
-        if (this.rawDataUris[url]) {
+        const rawDataUri = this.rawDataUris[url];
+        // we assume if a "." is included in a raw data uri, it is used to rewrite an asset URL
+        if (rawDataUri && !rawDataUri.includes(".")) {
             try {
-                let dataUri = this.rawDataUris[url];
-                this.finish(url, 200, this.dataUriToUint8Array(dataUri));
+                this.finish(url, 200, this.dataUriToUint8Array(rawDataUri));
             }
             catch (e) {
                 this.finish(url, 400, JSON.stringify(e));
@@ -5675,7 +6022,7 @@ class Downloader {
             return;
         }
         let request = new XMLHttpRequest();
-        request.open("GET", url, true);
+        request.open("GET", rawDataUri ? rawDataUri : url, true);
         request.responseType = "arraybuffer";
         let onerror = () => {
             this.finish(url, request.status, request.response);
@@ -5711,17 +6058,17 @@ class Downloader {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -5734,8 +6081,8 @@ class Downloader {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose values for an {@link Event}.
  *
@@ -5743,13 +6090,14 @@ class Downloader {
  * AnimationStateListener {@link AnimationStateListener#event()}, and
  * [Events](http://esotericsoftware.com/spine-events) in the Spine User Guide. */
 class Event {
+    data;
+    intValue = 0;
+    floatValue = 0;
+    stringValue = null;
+    time = 0;
+    volume = 0;
+    balance = 0;
     constructor(time, data) {
-        this.intValue = 0;
-        this.floatValue = 0;
-        this.stringValue = null;
-        this.time = 0;
-        this.volume = 0;
-        this.balance = 0;
         if (!data)
             throw new Error("data cannot be null.");
         this.time = time;
@@ -5759,17 +6107,17 @@ class Event {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -5782,37 +6130,38 @@ class Event {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose values for an {@link Event}.
  *
  * See [Events](http://esotericsoftware.com/spine-events) in the Spine User Guide. */
 class EventData {
+    name;
+    intValue = 0;
+    floatValue = 0;
+    stringValue = null;
+    audioPath = null;
+    volume = 0;
+    balance = 0;
     constructor(name) {
-        this.intValue = 0;
-        this.floatValue = 0;
-        this.stringValue = null;
-        this.audioPath = null;
-        this.volume = 0;
-        this.balance = 0;
         this.name = name;
     }
 }
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -5825,37 +6174,38 @@ class EventData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for an IK constraint. An IK constraint adjusts the rotation of 1 or 2 constrained bones so the tip of
  * the last bone is as close to the target bone as possible.
  *
  * See [IK constraints](http://esotericsoftware.com/spine-ik-constraints) in the Spine User Guide. */
 class IkConstraint {
+    /** The IK constraint's setup pose data. */
+    data;
+    /** The bones that will be modified by this IK constraint. */
+    bones;
+    /** The bone that is the IK target. */
+    target;
+    /** Controls the bend direction of the IK bones, either 1 or -1. */
+    bendDirection = 0;
+    /** When true and only a single bone is being constrained, if the target is too close, the bone is scaled to reach it. */
+    compress = false;
+    /** When true, if the target is out of range, the parent bone is scaled to reach it. If more than one bone is being constrained
+     * and the parent bone has local nonuniform scale, stretch is not applied. */
+    stretch = false;
+    /** A percentage (0-1) that controls the mix between the constrained and unconstrained rotations. */
+    mix = 1;
+    /** For two bone IK, the distance from the maximum reach of the bones that rotation will slow. */
+    softness = 0;
+    active = false;
     constructor(data, skeleton) {
-        /** Controls the bend direction of the IK bones, either 1 or -1. */
-        this.bendDirection = 0;
-        /** When true and only a single bone is being constrained, if the target is too close, the bone is scaled to reach it. */
-        this.compress = false;
-        /** When true, if the target is out of range, the parent bone is scaled to reach it. If more than one bone is being constrained
-         * and the parent bone has local nonuniform scale, stretch is not applied. */
-        this.stretch = false;
-        /** A percentage (0-1) that controls the mix between the constrained and unconstrained rotations. */
-        this.mix = 1;
-        /** For two bone IK, the distance from the maximum reach of the bones that rotation will slow. */
-        this.softness = 0;
-        this.active = false;
         if (!data)
             throw new Error("data cannot be null.");
         if (!skeleton)
             throw new Error("skeleton cannot be null.");
         this.data = data;
-        this.mix = data.mix;
-        this.softness = data.softness;
-        this.bendDirection = data.bendDirection;
-        this.compress = data.compress;
-        this.stretch = data.stretch;
         this.bones = new Array();
         for (let i = 0; i < data.bones.length; i++) {
             let bone = skeleton.findBone(data.bones[i].name);
@@ -5867,11 +6217,24 @@ class IkConstraint {
         if (!target)
             throw new Error(`Couldn't find bone ${data.target.name}`);
         this.target = target;
+        this.mix = data.mix;
+        this.softness = data.softness;
+        this.bendDirection = data.bendDirection;
+        this.compress = data.compress;
+        this.stretch = data.stretch;
     }
     isActive() {
         return this.active;
     }
-    update() {
+    setToSetupPose() {
+        const data = this.data;
+        this.mix = data.mix;
+        this.softness = data.softness;
+        this.bendDirection = data.bendDirection;
+        this.compress = data.compress;
+        this.stretch = data.stretch;
+    }
+    update(physics) {
         if (this.mix == 0)
             return;
         let target = this.target;
@@ -5892,12 +6255,12 @@ class IkConstraint {
             throw new Error("IK bone must have parent.");
         let pa = p.a, pb = p.b, pc = p.c, pd = p.d;
         let rotationIK = -bone.ashearX - bone.arotation, tx = 0, ty = 0;
-        switch (bone.data.transformMode) {
-            case TransformMode.OnlyTranslation:
-                tx = targetX - bone.worldX;
-                ty = targetY - bone.worldY;
+        switch (bone.inherit) {
+            case Inherit.OnlyTranslation:
+                tx = (targetX - bone.worldX) * MathUtils.signum(bone.skeleton.scaleX);
+                ty = (targetY - bone.worldY) * MathUtils.signum(bone.skeleton.scaleY);
                 break;
-            case TransformMode.NoRotationOrReflection:
+            case Inherit.NoRotationOrReflection:
                 let s = Math.abs(pa * pd - pb * pc) / Math.max(0.0001, pa * pa + pc * pc);
                 let sa = pa / bone.skeleton.scaleX;
                 let sc = pc / bone.skeleton.scaleY;
@@ -5926,18 +6289,21 @@ class IkConstraint {
             rotationIK += 360;
         let sx = bone.ascaleX, sy = bone.ascaleY;
         if (compress || stretch) {
-            switch (bone.data.transformMode) {
-                case TransformMode.NoScale:
-                case TransformMode.NoScaleOrReflection:
+            switch (bone.inherit) {
+                case Inherit.NoScale:
+                case Inherit.NoScaleOrReflection:
                     tx = targetX - bone.worldX;
                     ty = targetY - bone.worldY;
             }
-            let b = bone.data.length * sx, dd = Math.sqrt(tx * tx + ty * ty);
-            if ((compress && dd < b) || (stretch && dd > b) && b > 0.0001) {
-                let s = (dd / b - 1) * alpha + 1;
-                sx *= s;
-                if (uniform)
-                    sy *= s;
+            const b = bone.data.length * sx;
+            if (b > 0.0001) {
+                const dd = tx * tx + ty * ty;
+                if ((compress && dd < b * b) || (stretch && dd > b * b)) {
+                    const s = (Math.sqrt(dd) / b - 1) * alpha + 1;
+                    sx *= s;
+                    if (uniform)
+                        sy *= s;
+                }
             }
         }
         bone.updateWorldTransformWith(bone.ax, bone.ay, bone.arotation + rotationIK * alpha, sx, sy, bone.ashearX, bone.ashearY);
@@ -5945,6 +6311,8 @@ class IkConstraint {
     /** Applies 2 bone IK. The target is specified in the world coordinate system.
      * @param child A direct descendant of the parent bone. */
     apply2(parent, child, targetX, targetY, bendDir, stretch, uniform, softness, alpha) {
+        if (parent.inherit != Inherit.Normal || child.inherit != Inherit.Normal)
+            return;
         let px = parent.ax, py = parent.ay, psx = parent.ascaleX, psy = parent.ascaleY, sx = psx, sy = psy, csx = child.ascaleX;
         let os1 = 0, os2 = 0, s2 = 0;
         if (psx < 0) {
@@ -6046,8 +6414,9 @@ class IkConstraint {
                 q = -(c1 + q) * 0.5;
                 let r0 = q / c2, r1 = c / q;
                 let r = Math.abs(r0) < Math.abs(r1) ? r0 : r1;
-                if (r * r <= dd) {
-                    y = Math.sqrt(dd - r * r) * bendDir;
+                r0 = dd - r * r;
+                if (r0 >= 0) {
+                    y = Math.sqrt(r0) * bendDir;
                     a1 = ta - Math.atan2(y, r);
                     a2 = Math.atan2(y / psy, (r - l1) / psx);
                     break outer;
@@ -6103,17 +6472,17 @@ class IkConstraint {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -6126,13 +6495,17 @@ class IkConstraint {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for an {@link IkConstraint}.
  * <p>
  * See [IK constraints](http://esotericsoftware.com/spine-ik-constraints) in the Spine User Guide. */
 class IkConstraintData extends ConstraintData {
+    /** The bones that are constrained by this IK constraint. */
+    bones = new Array();
+    /** The bone that is the IK target. */
+    _target = null;
     set target(boneData) { this._target = boneData; }
     get target() {
         if (!this._target)
@@ -6140,42 +6513,38 @@ class IkConstraintData extends ConstraintData {
         else
             return this._target;
     }
+    /** Controls the bend direction of the IK bones, either 1 or -1. */
+    bendDirection = 0;
+    /** When true and only a single bone is being constrained, if the target is too close, the bone is scaled to reach it. */
+    compress = false;
+    /** When true, if the target is out of range, the parent bone is scaled to reach it. If more than one bone is being constrained
+     * and the parent bone has local nonuniform scale, stretch is not applied. */
+    stretch = false;
+    /** When true, only a single bone is being constrained, and {@link #getCompress()} or {@link #getStretch()} is used, the bone
+     * is scaled on both the X and Y axes. */
+    uniform = false;
+    /** A percentage (0-1) that controls the mix between the constrained and unconstrained rotations. */
+    mix = 0;
+    /** For two bone IK, the distance from the maximum reach of the bones that rotation will slow. */
+    softness = 0;
     constructor(name) {
         super(name, 0, false);
-        /** The bones that are constrained by this IK constraint. */
-        this.bones = new Array();
-        /** The bone that is the IK target. */
-        this._target = null;
-        /** Controls the bend direction of the IK bones, either 1 or -1. */
-        this.bendDirection = 1;
-        /** When true and only a single bone is being constrained, if the target is too close, the bone is scaled to reach it. */
-        this.compress = false;
-        /** When true, if the target is out of range, the parent bone is scaled to reach it. If more than one bone is being constrained
-         * and the parent bone has local nonuniform scale, stretch is not applied. */
-        this.stretch = false;
-        /** When true, only a single bone is being constrained, and {@link #getCompress()} or {@link #getStretch()} is used, the bone
-         * is scaled on both the X and Y axes. */
-        this.uniform = false;
-        /** A percentage (0-1) that controls the mix between the constrained and unconstrained rotations. */
-        this.mix = 1;
-        /** For two bone IK, the distance from the maximum reach of the bones that rotation will slow. */
-        this.softness = 0;
     }
 }
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -6188,13 +6557,17 @@ class IkConstraintData extends ConstraintData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link PathConstraint}.
  *
  * See [path constraints](http://esotericsoftware.com/spine-path-constraints) in the Spine User Guide. */
 class PathConstraintData extends ConstraintData {
+    /** The bones that will be modified by this path constraint. */
+    bones = new Array();
+    /** The slot whose path attachment will be used to constrained the bones. */
+    _target = null;
     set target(slotData) { this._target = slotData; }
     get target() {
         if (!this._target)
@@ -6202,27 +6575,23 @@ class PathConstraintData extends ConstraintData {
         else
             return this._target;
     }
+    /** The mode for positioning the first bone on the path. */
+    positionMode = PositionMode.Fixed;
+    /** The mode for positioning the bones after the first bone on the path. */
+    spacingMode = SpacingMode.Fixed;
+    /** The mode for adjusting the rotation of the bones. */
+    rotateMode = RotateMode.Chain;
+    /** An offset added to the constrained bone rotation. */
+    offsetRotation = 0;
+    /** The position along the path. */
+    position = 0;
+    /** The spacing between bones. */
+    spacing = 0;
+    mixRotate = 0;
+    mixX = 0;
+    mixY = 0;
     constructor(name) {
         super(name, 0, false);
-        /** The bones that will be modified by this path constraint. */
-        this.bones = new Array();
-        /** The slot whose path attachment will be used to constrained the bones. */
-        this._target = null;
-        /** The mode for positioning the first bone on the path. */
-        this.positionMode = PositionMode.Fixed;
-        /** The mode for positioning the bones after the first bone on the path. */
-        this.spacingMode = SpacingMode.Fixed;
-        /** The mode for adjusting the rotation of the bones. */
-        this.rotateMode = RotateMode.Chain;
-        /** An offset added to the constrained bone rotation. */
-        this.offsetRotation = 0;
-        /** The position along the path. */
-        this.position = 0;
-        /** The spacing between bones. */
-        this.spacing = 0;
-        this.mixRotate = 0;
-        this.mixX = 0;
-        this.mixY = 0;
     }
 }
 /** Controls how the first bone is positioned along the path.
@@ -6255,17 +6624,17 @@ var RotateMode;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -6278,29 +6647,39 @@ var RotateMode;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for a path constraint. A path constraint adjusts the rotation, translation, and scale of the
  * constrained bones so they follow a {@link PathAttachment}.
  *
  * See [Path constraints](http://esotericsoftware.com/spine-path-constraints) in the Spine User Guide. */
 class PathConstraint {
+    static NONE = -1;
+    static BEFORE = -2;
+    static AFTER = -3;
+    static epsilon = 0.00001;
+    /** The path constraint's setup pose data. */
+    data;
+    /** The bones that will be modified by this path constraint. */
+    bones;
+    /** The slot whose path attachment will be used to constrained the bones. */
+    target;
+    /** The position along the path. */
+    position = 0;
+    /** The spacing between bones. */
+    spacing = 0;
+    mixRotate = 0;
+    mixX = 0;
+    mixY = 0;
+    spaces = new Array();
+    positions = new Array();
+    world = new Array();
+    curves = new Array();
+    lengths = new Array();
+    segments = new Array();
+    active = false;
     constructor(data, skeleton) {
-        /** The position along the path. */
-        this.position = 0;
-        /** The spacing between bones. */
-        this.spacing = 0;
-        this.mixRotate = 0;
-        this.mixX = 0;
-        this.mixY = 0;
-        this.spaces = new Array();
-        this.positions = new Array();
-        this.world = new Array();
-        this.curves = new Array();
-        this.lengths = new Array();
-        this.segments = new Array();
-        this.active = false;
         if (!data)
             throw new Error("data cannot be null.");
         if (!skeleton)
@@ -6326,7 +6705,15 @@ class PathConstraint {
     isActive() {
         return this.active;
     }
-    update() {
+    setToSetupPose() {
+        const data = this.data;
+        this.position = data.position;
+        this.spacing = data.spacing;
+        this.mixRotate = data.mixRotate;
+        this.mixX = data.mixX;
+        this.mixY = data.mixY;
+    }
+    update(physics) {
         let attachment = this.target.getAttachment();
         if (!(attachment instanceof PathAttachment))
             return;
@@ -6345,12 +6732,8 @@ class PathConstraint {
                     for (let i = 0, n = spacesCount - 1; i < n; i++) {
                         let bone = bones[i];
                         let setupLength = bone.data.length;
-                        if (setupLength < PathConstraint.epsilon)
-                            lengths[i] = 0;
-                        else {
-                            let x = setupLength * bone.a, y = setupLength * bone.c;
-                            lengths[i] = Math.sqrt(x * x + y * y);
-                        }
+                        let x = setupLength * bone.a, y = setupLength * bone.c;
+                        lengths[i] = Math.sqrt(x * x + y * y);
                     }
                 }
                 Utils.arrayFill(spaces, 1, spacesCount, spacing);
@@ -6721,24 +7104,20 @@ class PathConstraint {
         }
     }
 }
-PathConstraint.NONE = -1;
-PathConstraint.BEFORE = -2;
-PathConstraint.AFTER = -3;
-PathConstraint.epsilon = 0.00001;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -6751,27 +7130,330 @@ PathConstraint.epsilon = 0.00001;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *****************************************************************************/
+/** Stores the current pose for a physics constraint. A physics constraint applies physics to bones.
+ * <p>
+ * See <a href="http://esotericsoftware.com/spine-physics-constraints">Physics constraints</a> in the Spine User Guide. */
+class PhysicsConstraint {
+    data;
+    _bone = null;
+    /** The bone constrained by this physics constraint. */
+    set bone(bone) { this._bone = bone; }
+    get bone() {
+        if (!this._bone)
+            throw new Error("Bone not set.");
+        else
+            return this._bone;
+    }
+    inertia = 0;
+    strength = 0;
+    damping = 0;
+    massInverse = 0;
+    wind = 0;
+    gravity = 0;
+    mix = 0;
+    _reset = true;
+    ux = 0;
+    uy = 0;
+    cx = 0;
+    cy = 0;
+    tx = 0;
+    ty = 0;
+    xOffset = 0;
+    xVelocity = 0;
+    yOffset = 0;
+    yVelocity = 0;
+    rotateOffset = 0;
+    rotateVelocity = 0;
+    scaleOffset = 0;
+    scaleVelocity = 0;
+    active = false;
+    skeleton;
+    remaining = 0;
+    lastTime = 0;
+    constructor(data, skeleton) {
+        this.data = data;
+        this.skeleton = skeleton;
+        this.bone = skeleton.bones[data.bone.index];
+        this.inertia = data.inertia;
+        this.strength = data.strength;
+        this.damping = data.damping;
+        this.massInverse = data.massInverse;
+        this.wind = data.wind;
+        this.gravity = data.gravity;
+        this.mix = data.mix;
+    }
+    reset() {
+        this.remaining = 0;
+        this.lastTime = this.skeleton.time;
+        this._reset = true;
+        this.xOffset = 0;
+        this.xVelocity = 0;
+        this.yOffset = 0;
+        this.yVelocity = 0;
+        this.rotateOffset = 0;
+        this.rotateVelocity = 0;
+        this.scaleOffset = 0;
+        this.scaleVelocity = 0;
+    }
+    setToSetupPose() {
+        const data = this.data;
+        this.inertia = data.inertia;
+        this.strength = data.strength;
+        this.damping = data.damping;
+        this.massInverse = data.massInverse;
+        this.wind = data.wind;
+        this.gravity = data.gravity;
+        this.mix = data.mix;
+    }
+    isActive() {
+        return this.active;
+    }
+    /** Applies the constraint to the constrained bones. */
+    update(physics) {
+        const mix = this.mix;
+        if (mix == 0)
+            return;
+        const x = this.data.x > 0, y = this.data.y > 0, rotateOrShearX = this.data.rotate > 0 || this.data.shearX > 0, scaleX = this.data.scaleX > 0;
+        const bone = this.bone;
+        const l = bone.data.length;
+        switch (physics) {
+            case Physics.none:
+                return;
+            case Physics.reset:
+                this.reset();
+            // Fall through.
+            case Physics.update:
+                const skeleton = this.skeleton;
+                const delta = Math.max(this.skeleton.time - this.lastTime, 0);
+                this.remaining += delta;
+                this.lastTime = skeleton.time;
+                const bx = bone.worldX, by = bone.worldY;
+                if (this._reset) {
+                    this._reset = false;
+                    this.ux = bx;
+                    this.uy = by;
+                }
+                else {
+                    let a = this.remaining, i = this.inertia, t = this.data.step, f = this.skeleton.data.referenceScale, d = -1;
+                    let qx = this.data.limit * delta, qy = qx * Math.abs(skeleton.scaleY);
+                    qx *= Math.abs(skeleton.scaleX);
+                    if (x || y) {
+                        if (x) {
+                            const u = (this.ux - bx) * i;
+                            this.xOffset += u > qx ? qx : u < -qx ? -qx : u;
+                            this.ux = bx;
+                        }
+                        if (y) {
+                            const u = (this.uy - by) * i;
+                            this.yOffset += u > qy ? qy : u < -qy ? -qy : u;
+                            this.uy = by;
+                        }
+                        if (a >= t) {
+                            d = Math.pow(this.damping, 60 * t);
+                            const m = this.massInverse * t, e = this.strength, w = this.wind * f * skeleton.scaleX, g = this.gravity * f * skeleton.scaleY;
+                            do {
+                                if (x) {
+                                    this.xVelocity += (w - this.xOffset * e) * m;
+                                    this.xOffset += this.xVelocity * t;
+                                    this.xVelocity *= d;
+                                }
+                                if (y) {
+                                    this.yVelocity -= (g + this.yOffset * e) * m;
+                                    this.yOffset += this.yVelocity * t;
+                                    this.yVelocity *= d;
+                                }
+                                a -= t;
+                            } while (a >= t);
+                        }
+                        if (x)
+                            bone.worldX += this.xOffset * mix * this.data.x;
+                        if (y)
+                            bone.worldY += this.yOffset * mix * this.data.y;
+                    }
+                    if (rotateOrShearX || scaleX) {
+                        let ca = Math.atan2(bone.c, bone.a), c = 0, s = 0, mr = 0;
+                        let dx = this.cx - bone.worldX, dy = this.cy - bone.worldY;
+                        if (dx > qx)
+                            dx = qx;
+                        else if (dx < -qx) //
+                            dx = -qx;
+                        if (dy > qy)
+                            dy = qy;
+                        else if (dy < -qy) //
+                            dy = -qy;
+                        if (rotateOrShearX) {
+                            mr = (this.data.rotate + this.data.shearX) * mix;
+                            let r = Math.atan2(dy + this.ty, dx + this.tx) - ca - this.rotateOffset * mr;
+                            this.rotateOffset += (r - Math.ceil(r * MathUtils.invPI2 - 0.5) * MathUtils.PI2) * i;
+                            r = this.rotateOffset * mr + ca;
+                            c = Math.cos(r);
+                            s = Math.sin(r);
+                            if (scaleX) {
+                                r = l * bone.getWorldScaleX();
+                                if (r > 0)
+                                    this.scaleOffset += (dx * c + dy * s) * i / r;
+                            }
+                        }
+                        else {
+                            c = Math.cos(ca);
+                            s = Math.sin(ca);
+                            const r = l * bone.getWorldScaleX();
+                            if (r > 0)
+                                this.scaleOffset += (dx * c + dy * s) * i / r;
+                        }
+                        a = this.remaining;
+                        if (a >= t) {
+                            if (d == -1)
+                                d = Math.pow(this.damping, 60 * t);
+                            const m = this.massInverse * t, e = this.strength, w = this.wind, g = (Skeleton.yDown ? -this.gravity : this.gravity), h = l / f;
+                            while (true) {
+                                a -= t;
+                                if (scaleX) {
+                                    this.scaleVelocity += (w * c - g * s - this.scaleOffset * e) * m;
+                                    this.scaleOffset += this.scaleVelocity * t;
+                                    this.scaleVelocity *= d;
+                                }
+                                if (rotateOrShearX) {
+                                    this.rotateVelocity -= ((w * s + g * c) * h + this.rotateOffset * e) * m;
+                                    this.rotateOffset += this.rotateVelocity * t;
+                                    this.rotateVelocity *= d;
+                                    if (a < t)
+                                        break;
+                                    const r = this.rotateOffset * mr + ca;
+                                    c = Math.cos(r);
+                                    s = Math.sin(r);
+                                }
+                                else if (a < t) //
+                                    break;
+                            }
+                        }
+                    }
+                    this.remaining = a;
+                }
+                this.cx = bone.worldX;
+                this.cy = bone.worldY;
+                break;
+            case Physics.pose:
+                if (x)
+                    bone.worldX += this.xOffset * mix * this.data.x;
+                if (y)
+                    bone.worldY += this.yOffset * mix * this.data.y;
+        }
+        if (rotateOrShearX) {
+            let o = this.rotateOffset * mix, s = 0, c = 0, a = 0;
+            if (this.data.shearX > 0) {
+                let r = 0;
+                if (this.data.rotate > 0) {
+                    r = o * this.data.rotate;
+                    s = Math.sin(r);
+                    c = Math.cos(r);
+                    a = bone.b;
+                    bone.b = c * a - s * bone.d;
+                    bone.d = s * a + c * bone.d;
+                }
+                r += o * this.data.shearX;
+                s = Math.sin(r);
+                c = Math.cos(r);
+                a = bone.a;
+                bone.a = c * a - s * bone.c;
+                bone.c = s * a + c * bone.c;
+            }
+            else {
+                o *= this.data.rotate;
+                s = Math.sin(o);
+                c = Math.cos(o);
+                a = bone.a;
+                bone.a = c * a - s * bone.c;
+                bone.c = s * a + c * bone.c;
+                a = bone.b;
+                bone.b = c * a - s * bone.d;
+                bone.d = s * a + c * bone.d;
+            }
+        }
+        if (scaleX) {
+            const s = 1 + this.scaleOffset * mix * this.data.scaleX;
+            bone.a *= s;
+            bone.c *= s;
+        }
+        if (physics != Physics.pose) {
+            this.tx = l * bone.a;
+            this.ty = l * bone.c;
+        }
+        bone.updateAppliedTransform();
+    }
+    /** Translates the physics constraint so next {@link #update(Physics)} forces are applied as if the bone moved an additional
+     * amount in world space. */
+    translate(x, y) {
+        this.ux -= x;
+        this.uy -= y;
+        this.cx -= x;
+        this.cy -= y;
+    }
+    /** Rotates the physics constraint so next {@link #update(Physics)} forces are applied as if the bone rotated around the
+     * specified point in world space. */
+    rotate(x, y, degrees) {
+        const r = degrees * MathUtils.degRad, cos = Math.cos(r), sin = Math.sin(r);
+        const dx = this.cx - x, dy = this.cy - y;
+        this.translate(dx * cos - dy * sin - dx, dx * sin + dy * cos - dy);
+    }
+}
+
+/******************************************************************************
+ * Spine Runtimes License Agreement
+ * Last updated April 5, 2025. Replaces all prior versions.
+ *
+ * Copyright (c) 2013-2025, Esoteric Software LLC
+ *
+ * Integration of the Spine Runtimes into software or otherwise creating
+ * derivative works of the Spine Runtimes is permitted under the terms and
+ * conditions of Section 2 of the Spine Editor License Agreement:
+ * http://esotericsoftware.com/spine-editor-license
+ *
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
+ * "Products"), provided that each user of the Products must obtain their own
+ * Spine Editor license and redistribution of the Products in any form must
+ * include this license and copyright notice.
+ *
+ * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+ * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores a slot's current pose. Slots organize attachments for {@link Skeleton#drawOrder} purposes and provide a place to store
  * state for an attachment. State cannot be stored in an attachment itself because attachments are stateless and may be shared
  * across multiple skeletons. */
 class Slot {
+    /** The slot's setup pose data. */
+    data;
+    /** The bone this slot belongs to. */
+    bone;
+    /** The color used to tint the slot's attachment. If {@link #getDarkColor()} is set, this is used as the light color for two
+     * color tinting. */
+    color;
+    /** The dark color used to tint the slot's attachment for two color tinting, or null if two color tinting is not used. The dark
+     * color's alpha is not used. */
+    darkColor = null;
+    attachment = null;
+    attachmentState = 0;
+    /** The index of the texture region to display when the slot's attachment has a {@link Sequence}. -1 represents the
+     * {@link Sequence#getSetupIndex()}. */
+    sequenceIndex = -1;
+    /** Values to deform the slot's attachment. For an unweighted mesh, the entries are local positions for each vertex. For a
+     * weighted mesh, the entries are an offset for each vertex which will be added to the mesh's local vertex positions.
+     *
+     * See {@link VertexAttachment#computeWorldVertices()} and {@link DeformTimeline}. */
+    deform = new Array();
     constructor(data, bone) {
-        /** The dark color used to tint the slot's attachment for two color tinting, or null if two color tinting is not used. The dark
-         * color's alpha is not used. */
-        this.darkColor = null;
-        this.attachment = null;
-        this.attachmentState = 0;
-        /** The index of the texture region to display when the slot's attachment has a {@link Sequence}. -1 represents the
-         * {@link Sequence#getSetupIndex()}. */
-        this.sequenceIndex = -1;
-        /** Values to deform the slot's attachment. For an unweighted mesh, the entries are local positions for each vertex. For a
-         * weighted mesh, the entries are an offset for each vertex which will be added to the mesh's local vertex positions.
-         *
-         * See {@link VertexAttachment#computeWorldVertices()} and {@link DeformTimeline}. */
-        this.deform = new Array();
         if (!data)
             throw new Error("data cannot be null.");
         if (!bone)
@@ -6819,17 +7501,17 @@ class Slot {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -6842,34 +7524,34 @@ class Slot {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for a transform constraint. A transform constraint adjusts the world transform of the constrained
  * bones to match that of the target bone.
  *
  * See [Transform constraints](http://esotericsoftware.com/spine-transform-constraints) in the Spine User Guide. */
 class TransformConstraint {
+    /** The transform constraint's setup pose data. */
+    data;
+    /** The bones that will be modified by this transform constraint. */
+    bones;
+    /** The target bone whose world transform will be copied to the constrained bones. */
+    target;
+    mixRotate = 0;
+    mixX = 0;
+    mixY = 0;
+    mixScaleX = 0;
+    mixScaleY = 0;
+    mixShearY = 0;
+    temp = new Vector2();
+    active = false;
     constructor(data, skeleton) {
-        this.mixRotate = 0;
-        this.mixX = 0;
-        this.mixY = 0;
-        this.mixScaleX = 0;
-        this.mixScaleY = 0;
-        this.mixShearY = 0;
-        this.temp = new Vector2();
-        this.active = false;
         if (!data)
             throw new Error("data cannot be null.");
         if (!skeleton)
             throw new Error("skeleton cannot be null.");
         this.data = data;
-        this.mixRotate = data.mixRotate;
-        this.mixX = data.mixX;
-        this.mixY = data.mixY;
-        this.mixScaleX = data.mixScaleX;
-        this.mixScaleY = data.mixScaleY;
-        this.mixShearY = data.mixShearY;
         this.bones = new Array();
         for (let i = 0; i < data.bones.length; i++) {
             let bone = skeleton.findBone(data.bones[i].name);
@@ -6881,11 +7563,26 @@ class TransformConstraint {
         if (!target)
             throw new Error(`Couldn't find target bone ${data.target.name}.`);
         this.target = target;
+        this.mixRotate = data.mixRotate;
+        this.mixX = data.mixX;
+        this.mixY = data.mixY;
+        this.mixScaleX = data.mixScaleX;
+        this.mixScaleY = data.mixScaleY;
+        this.mixShearY = data.mixShearY;
     }
     isActive() {
         return this.active;
     }
-    update() {
+    setToSetupPose() {
+        const data = this.data;
+        this.mixRotate = data.mixRotate;
+        this.mixX = data.mixX;
+        this.mixY = data.mixY;
+        this.mixScaleX = data.mixScaleX;
+        this.mixScaleY = data.mixScaleY;
+        this.mixShearY = data.mixShearY;
+    }
+    update(physics) {
         if (this.mixRotate == 0 && this.mixX == 0 && this.mixY == 0 && this.mixScaleX == 0 && this.mixScaleY == 0 && this.mixShearY == 0)
             return;
         if (this.data.local) {
@@ -7024,11 +7721,8 @@ class TransformConstraint {
         for (let i = 0, n = bones.length; i < n; i++) {
             let bone = bones[i];
             let rotation = bone.arotation;
-            if (mixRotate != 0) {
-                let r = target.arotation - rotation + this.data.offsetRotation;
-                r -= (16384 - ((16384.499999999996 - r / 360) | 0)) * 360;
-                rotation += r * mixRotate;
-            }
+            if (mixRotate != 0)
+                rotation += (target.arotation - rotation + this.data.offsetRotation) * mixRotate;
             let x = bone.ax, y = bone.ay;
             x += (target.ax - x + this.data.offsetX) * mixX;
             y += (target.ay - y + this.data.offsetY) * mixY;
@@ -7038,11 +7732,8 @@ class TransformConstraint {
             if (mixScaleY != 0 && scaleY != 0)
                 scaleY = (scaleY + (target.ascaleY - scaleY + this.data.offsetScaleY) * mixScaleY) / scaleY;
             let shearY = bone.ashearY;
-            if (mixShearY != 0) {
-                let r = target.ashearY - shearY + this.data.offsetShearY;
-                r -= (16384 - ((16384.499999999996 - r / 360) | 0)) * 360;
-                shearY += r * mixShearY;
-            }
+            if (mixShearY != 0)
+                shearY += (target.ashearY - shearY + this.data.offsetShearY) * mixShearY;
             bone.updateWorldTransformWith(x, y, rotation, scaleX, scaleY, bone.ashearX, shearY);
         }
     }
@@ -7065,17 +7756,17 @@ class TransformConstraint {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -7088,35 +7779,58 @@ class TransformConstraint {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the current pose for a skeleton.
  *
  * See [Instance objects](http://esotericsoftware.com/spine-runtime-architecture#Instance-objects) in the Spine Runtimes Guide. */
 class Skeleton {
-    ;
+    static quadTriangles = [0, 1, 2, 2, 3, 0];
+    static yDown = false;
+    /** The skeleton's setup pose data. */
+    data;
+    /** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
+    bones;
+    /** The skeleton's slots in the setup pose draw order. */
+    slots;
+    /** The skeleton's slots in the order they should be drawn. The returned array may be modified to change the draw order. */
+    drawOrder;
+    /** The skeleton's IK constraints. */
+    ikConstraints;
+    /** The skeleton's transform constraints. */
+    transformConstraints;
+    /** The skeleton's path constraints. */
+    pathConstraints;
+    /** The skeleton's physics constraints. */
+    physicsConstraints;
+    /** The list of bones and constraints, sorted in the order they should be updated, as computed by {@link #updateCache()}. */
+    _updateCache = new Array();
+    /** The skeleton's current skin. May be null. */
+    skin = null;
+    /** The color to tint all the skeleton's attachments. */
+    color;
+    /** Scales the entire skeleton on the X axis. This affects all bones, even if the bone's transform mode disallows scale
+      * inheritance. */
+    scaleX = 1;
+    /** Scales the entire skeleton on the Y axis. This affects all bones, even if the bone's transform mode disallows scale
+      * inheritance. */
+    _scaleY = 1;
     get scaleY() {
         return Skeleton.yDown ? -this._scaleY : this._scaleY;
     }
     set scaleY(scaleY) {
         this._scaleY = scaleY;
     }
+    /** Sets the skeleton X position, which is added to the root bone worldX position. */
+    x = 0;
+    /** Sets the skeleton Y position, which is added to the root bone worldY position. */
+    y = 0;
+    /** Returns the skeleton's time. This is used for time-based manipulations, such as {@link PhysicsConstraint}.
+     * <p>
+     * See {@link #update(float)}. */
+    time = 0;
     constructor(data) {
-        /** The list of bones and constraints, sorted in the order they should be updated, as computed by {@link #updateCache()}. */
-        this._updateCache = new Array();
-        /** The skeleton's current skin. May be null. */
-        this.skin = null;
-        /** Scales the entire skeleton on the X axis. This affects all bones, even if the bone's transform mode disallows scale
-          * inheritance. */
-        this.scaleX = 1;
-        /** Scales the entire skeleton on the Y axis. This affects all bones, even if the bone's transform mode disallows scale
-          * inheritance. */
-        this._scaleY = 1;
-        /** Sets the skeleton X position, which is added to the root bone worldX position. */
-        this.x = 0;
-        /** Sets the skeleton Y position, which is added to the root bone worldY position. */
-        this.y = 0;
         if (!data)
             throw new Error("data cannot be null.");
         this.data = data;
@@ -7157,6 +7871,11 @@ class Skeleton {
             let pathConstraintData = data.pathConstraints[i];
             this.pathConstraints.push(new PathConstraint(pathConstraintData, this));
         }
+        this.physicsConstraints = new Array();
+        for (let i = 0; i < data.physicsConstraints.length; i++) {
+            let physicsConstraintData = data.physicsConstraints[i];
+            this.physicsConstraints.push(new PhysicsConstraint(physicsConstraintData, this));
+        }
         this.color = new Color(1, 1, 1, 1);
         this.updateCache();
     }
@@ -7186,8 +7905,9 @@ class Skeleton {
         let ikConstraints = this.ikConstraints;
         let transformConstraints = this.transformConstraints;
         let pathConstraints = this.pathConstraints;
-        let ikCount = ikConstraints.length, transformCount = transformConstraints.length, pathCount = pathConstraints.length;
-        let constraintCount = ikCount + transformCount + pathCount;
+        let physicsConstraints = this.physicsConstraints;
+        let ikCount = ikConstraints.length, transformCount = transformConstraints.length, pathCount = pathConstraints.length, physicsCount = this.physicsConstraints.length;
+        let constraintCount = ikCount + transformCount + pathCount + physicsCount;
         outer: for (let i = 0; i < constraintCount; i++) {
             for (let ii = 0; ii < ikCount; ii++) {
                 let constraint = ikConstraints[ii];
@@ -7207,6 +7927,13 @@ class Skeleton {
                 let constraint = pathConstraints[ii];
                 if (constraint.data.order == i) {
                     this.sortPathConstraint(constraint);
+                    continue outer;
+                }
+            }
+            for (let ii = 0; ii < physicsCount; ii++) {
+                const constraint = physicsConstraints[ii];
+                if (constraint.data.order == i) {
+                    this.sortPhysicsConstraint(constraint);
                     continue outer;
                 }
             }
@@ -7310,6 +8037,16 @@ class Skeleton {
             }
         }
     }
+    sortPhysicsConstraint(constraint) {
+        const bone = constraint.bone;
+        constraint.active = bone.active && (!constraint.data.skinRequired || (this.skin != null && Utils.contains(this.skin.constraints, constraint.data, true)));
+        if (!constraint.active)
+            return;
+        this.sortBone(bone);
+        this._updateCache.push(constraint);
+        this.sortReset(bone.children);
+        bone.sorted = true;
+    }
     sortBone(bone) {
         if (!bone)
             return;
@@ -7335,7 +8072,9 @@ class Skeleton {
      *
      * See [World transforms](http://esotericsoftware.com/spine-runtime-skeletons#World-transforms) in the Spine
      * Runtimes Guide. */
-    updateWorldTransform() {
+    updateWorldTransform(physics) {
+        if (physics === undefined || physics === null)
+            throw new Error("physics is undefined");
         let bones = this.bones;
         for (let i = 0, n = bones.length; i < n; i++) {
             let bone = bones[i];
@@ -7349,9 +8088,22 @@ class Skeleton {
         }
         let updateCache = this._updateCache;
         for (let i = 0, n = updateCache.length; i < n; i++)
-            updateCache[i].update();
+            updateCache[i].update(physics);
     }
-    updateWorldTransformWith(parent) {
+    updateWorldTransformWith(physics, parent) {
+        if (!parent)
+            throw new Error("parent cannot be null.");
+        let bones = this.bones;
+        for (let i = 1, n = bones.length; i < n; i++) { // Skip root bone.
+            let bone = bones[i];
+            bone.ax = bone.x;
+            bone.ay = bone.y;
+            bone.arotation = bone.rotation;
+            bone.ascaleX = bone.scaleX;
+            bone.ascaleY = bone.scaleY;
+            bone.ashearX = bone.shearX;
+            bone.ashearY = bone.shearY;
+        }
         // Apply the parent bone transform to the root bone. The root bone always inherits scale, rotation and reflection.
         let rootBone = this.getRootBone();
         if (!rootBone)
@@ -7359,11 +8111,12 @@ class Skeleton {
         let pa = parent.a, pb = parent.b, pc = parent.c, pd = parent.d;
         rootBone.worldX = pa * this.x + pb * this.y + parent.worldX;
         rootBone.worldY = pc * this.x + pd * this.y + parent.worldY;
-        let rotationY = rootBone.rotation + 90 + rootBone.shearY;
-        let la = MathUtils.cosDeg(rootBone.rotation + rootBone.shearX) * rootBone.scaleX;
-        let lb = MathUtils.cosDeg(rotationY) * rootBone.scaleY;
-        let lc = MathUtils.sinDeg(rootBone.rotation + rootBone.shearX) * rootBone.scaleX;
-        let ld = MathUtils.sinDeg(rotationY) * rootBone.scaleY;
+        const rx = (rootBone.rotation + rootBone.shearX) * MathUtils.degRad;
+        const ry = (rootBone.rotation + 90 + rootBone.shearY) * MathUtils.degRad;
+        const la = Math.cos(rx) * rootBone.scaleX;
+        const lb = Math.cos(ry) * rootBone.scaleY;
+        const lc = Math.sin(rx) * rootBone.scaleX;
+        const ld = Math.sin(ry) * rootBone.scaleY;
         rootBone.a = (pa * la + pb * lc) * this.scaleX;
         rootBone.b = (pa * lb + pb * ld) * this.scaleX;
         rootBone.c = (pc * la + pd * lc) * this.scaleY;
@@ -7373,7 +8126,7 @@ class Skeleton {
         for (let i = 0, n = updateCache.length; i < n; i++) {
             let updatable = updateCache[i];
             if (updatable != rootBone)
-                updatable.update();
+                updatable.update(physics);
         }
     }
     /** Sets the bones, constraints, and slots to their setup pose values. */
@@ -7383,39 +8136,16 @@ class Skeleton {
     }
     /** Sets the bones and constraints to their setup pose values. */
     setBonesToSetupPose() {
-        let bones = this.bones;
-        for (let i = 0, n = bones.length; i < n; i++)
-            bones[i].setToSetupPose();
-        let ikConstraints = this.ikConstraints;
-        for (let i = 0, n = ikConstraints.length; i < n; i++) {
-            let constraint = ikConstraints[i];
-            constraint.mix = constraint.data.mix;
-            constraint.softness = constraint.data.softness;
-            constraint.bendDirection = constraint.data.bendDirection;
-            constraint.compress = constraint.data.compress;
-            constraint.stretch = constraint.data.stretch;
-        }
-        let transformConstraints = this.transformConstraints;
-        for (let i = 0, n = transformConstraints.length; i < n; i++) {
-            let constraint = transformConstraints[i];
-            let data = constraint.data;
-            constraint.mixRotate = data.mixRotate;
-            constraint.mixX = data.mixX;
-            constraint.mixY = data.mixY;
-            constraint.mixScaleX = data.mixScaleX;
-            constraint.mixScaleY = data.mixScaleY;
-            constraint.mixShearY = data.mixShearY;
-        }
-        let pathConstraints = this.pathConstraints;
-        for (let i = 0, n = pathConstraints.length; i < n; i++) {
-            let constraint = pathConstraints[i];
-            let data = constraint.data;
-            constraint.position = data.position;
-            constraint.spacing = data.spacing;
-            constraint.mixRotate = data.mixRotate;
-            constraint.mixX = data.mixX;
-            constraint.mixY = data.mixY;
-        }
+        for (const bone of this.bones)
+            bone.setToSetupPose();
+        for (const constraint of this.ikConstraints)
+            constraint.setToSetupPose();
+        for (const constraint of this.transformConstraints)
+            constraint.setToSetupPose();
+        for (const constraint of this.pathConstraints)
+            constraint.setToSetupPose();
+        for (const constraint of this.physicsConstraints)
+            constraint.setToSetupPose();
     }
     /** Sets the slots and draw order to their setup pose values. */
     setSlotsToSetupPose() {
@@ -7553,13 +8283,7 @@ class Skeleton {
     findIkConstraint(constraintName) {
         if (!constraintName)
             throw new Error("constraintName cannot be null.");
-        let ikConstraints = this.ikConstraints;
-        for (let i = 0, n = ikConstraints.length; i < n; i++) {
-            let ikConstraint = ikConstraints[i];
-            if (ikConstraint.data.name == constraintName)
-                return ikConstraint;
-        }
-        return null;
+        return this.ikConstraints.find((constraint) => constraint.data.name == constraintName) ?? null;
     }
     /** Finds a transform constraint by comparing each transform constraint's name. It is more efficient to cache the results of
      * this method than to call it repeatedly.
@@ -7567,13 +8291,7 @@ class Skeleton {
     findTransformConstraint(constraintName) {
         if (!constraintName)
             throw new Error("constraintName cannot be null.");
-        let transformConstraints = this.transformConstraints;
-        for (let i = 0, n = transformConstraints.length; i < n; i++) {
-            let constraint = transformConstraints[i];
-            if (constraint.data.name == constraintName)
-                return constraint;
-        }
-        return null;
+        return this.transformConstraints.find((constraint) => constraint.data.name == constraintName) ?? null;
     }
     /** Finds a path constraint by comparing each path constraint's name. It is more efficient to cache the results of this method
      * than to call it repeatedly.
@@ -7581,27 +8299,29 @@ class Skeleton {
     findPathConstraint(constraintName) {
         if (!constraintName)
             throw new Error("constraintName cannot be null.");
-        let pathConstraints = this.pathConstraints;
-        for (let i = 0, n = pathConstraints.length; i < n; i++) {
-            let constraint = pathConstraints[i];
-            if (constraint.data.name == constraintName)
-                return constraint;
-        }
-        return null;
+        return this.pathConstraints.find((constraint) => constraint.data.name == constraintName) ?? null;
+    }
+    /** Finds a physics constraint by comparing each physics constraint's name. It is more efficient to cache the results of this
+     * method than to call it repeatedly. */
+    findPhysicsConstraint(constraintName) {
+        if (constraintName == null)
+            throw new Error("constraintName cannot be null.");
+        return this.physicsConstraints.find((constraint) => constraint.data.name == constraintName) ?? null;
     }
     /** Returns the axis aligned bounding box (AABB) of the region and mesh attachments for the current pose as `{ x: number, y: number, width: number, height: number }`.
      * Note that this method will create temporary objects which can add to garbage collection pressure. Use `getBounds()` if garbage collection is a concern. */
-    getBoundsRect() {
+    getBoundsRect(clipper) {
         let offset = new Vector2();
         let size = new Vector2();
-        this.getBounds(offset, size);
+        this.getBounds(offset, size, undefined, clipper);
         return { x: offset.x, y: offset.y, width: size.x, height: size.y };
     }
     /** Returns the axis aligned bounding box (AABB) of the region and mesh attachments for the current pose.
      * @param offset An output value, the distance from the skeleton origin to the bottom left corner of the AABB.
      * @param size An output value, the width and height of the AABB.
-     * @param temp Working memory to temporarily store attachments' computed world vertices. */
-    getBounds(offset, size, temp = new Array(2)) {
+     * @param temp Working memory to temporarily store attachments' computed world vertices.
+     * @param clipper {@link SkeletonClipping} to use. If <code>null</code>, no clipping is applied. */
+    getBounds(offset, size, temp = new Array(2), clipper = null) {
         if (!offset)
             throw new Error("offset cannot be null.");
         if (!size)
@@ -7614,19 +8334,31 @@ class Skeleton {
                 continue;
             let verticesLength = 0;
             let vertices = null;
+            let triangles = null;
             let attachment = slot.getAttachment();
             if (attachment instanceof RegionAttachment) {
                 verticesLength = 8;
                 vertices = Utils.setArraySize(temp, verticesLength, 0);
                 attachment.computeWorldVertices(slot, vertices, 0, 2);
+                triangles = Skeleton.quadTriangles;
             }
             else if (attachment instanceof MeshAttachment) {
                 let mesh = attachment;
                 verticesLength = mesh.worldVerticesLength;
                 vertices = Utils.setArraySize(temp, verticesLength, 0);
                 mesh.computeWorldVertices(slot, 0, verticesLength, vertices, 0, 2);
+                triangles = mesh.triangles;
             }
-            if (vertices) {
+            else if (attachment instanceof ClippingAttachment && clipper != null) {
+                clipper.clipStart(slot, attachment);
+                continue;
+            }
+            if (vertices && triangles) {
+                if (clipper != null && clipper.isClipping()) {
+                    clipper.clipTriangles(vertices, triangles, triangles.length);
+                    vertices = clipper.clippedVertices;
+                    verticesLength = clipper.clippedVertices.length;
+                }
                 for (let ii = 0, nn = vertices.length; ii < nn; ii += 2) {
                     let x = vertices[ii], y = vertices[ii + 1];
                     minX = Math.min(minX, x);
@@ -7635,26 +8367,56 @@ class Skeleton {
                     maxY = Math.max(maxY, y);
                 }
             }
+            if (clipper != null)
+                clipper.clipEndWithSlot(slot);
         }
+        if (clipper != null)
+            clipper.clipEnd();
         offset.set(minX, minY);
         size.set(maxX - minX, maxY - minY);
     }
+    /** Increments the skeleton's {@link #time}. */
+    update(delta) {
+        this.time += delta;
+    }
+    physicsTranslate(x, y) {
+        const physicsConstraints = this.physicsConstraints;
+        for (let i = 0, n = physicsConstraints.length; i < n; i++)
+            physicsConstraints[i].translate(x, y);
+    }
+    /** Calls {@link PhysicsConstraint#rotate(float, float, float)} for each physics constraint. */
+    physicsRotate(x, y, degrees) {
+        const physicsConstraints = this.physicsConstraints;
+        for (let i = 0, n = physicsConstraints.length; i < n; i++)
+            physicsConstraints[i].rotate(x, y, degrees);
+    }
 }
-Skeleton.yDown = false;
+/** Determines how physics and other non-deterministic updates are applied. */
+var Physics;
+(function (Physics) {
+    /** Physics are not updated or applied. */
+    Physics[Physics["none"] = 0] = "none";
+    /** Physics are reset to the current pose. */
+    Physics[Physics["reset"] = 1] = "reset";
+    /** Physics are updated and the pose from physics is applied. */
+    Physics[Physics["update"] = 2] = "update";
+    /** Physics are not updated but the pose from physics is applied. */
+    Physics[Physics["pose"] = 3] = "pose";
+})(Physics || (Physics = {}));
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -7667,57 +8429,128 @@ Skeleton.yDown = false;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *****************************************************************************/
+/** Stores the setup pose for a {@link PhysicsConstraint}.
+ * <p>
+ * See <a href="http://esotericsoftware.com/spine-physics-constraints">Physics constraints</a> in the Spine User Guide. */
+class PhysicsConstraintData extends ConstraintData {
+    _bone = null;
+    /** The bone constrained by this physics constraint. */
+    set bone(boneData) { this._bone = boneData; }
+    get bone() {
+        if (!this._bone)
+            throw new Error("BoneData not set.");
+        else
+            return this._bone;
+    }
+    x = 0;
+    y = 0;
+    rotate = 0;
+    scaleX = 0;
+    shearX = 0;
+    limit = 0;
+    step = 0;
+    inertia = 0;
+    strength = 0;
+    damping = 0;
+    massInverse = 0;
+    wind = 0;
+    gravity = 0;
+    /** A percentage (0-1) that controls the mix between the constrained and unconstrained poses. */
+    mix = 0;
+    inertiaGlobal = false;
+    strengthGlobal = false;
+    dampingGlobal = false;
+    massGlobal = false;
+    windGlobal = false;
+    gravityGlobal = false;
+    mixGlobal = false;
+    constructor(name) {
+        super(name, 0, false);
+    }
+}
+
+/******************************************************************************
+ * Spine Runtimes License Agreement
+ * Last updated April 5, 2025. Replaces all prior versions.
+ *
+ * Copyright (c) 2013-2025, Esoteric Software LLC
+ *
+ * Integration of the Spine Runtimes into software or otherwise creating
+ * derivative works of the Spine Runtimes is permitted under the terms and
+ * conditions of Section 2 of the Spine Editor License Agreement:
+ * http://esotericsoftware.com/spine-editor-license
+ *
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
+ * "Products"), provided that each user of the Products must obtain their own
+ * Spine Editor license and redistribution of the Products in any form must
+ * include this license and copyright notice.
+ *
+ * THE SPINE RUNTIMES ARE PROVIDED BY ESOTERIC SOFTWARE LLC "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL ESOTERIC SOFTWARE LLC BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
+ * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose and all of the stateless data for a skeleton.
  *
  * See [Data objects](http://esotericsoftware.com/spine-runtime-architecture#Data-objects) in the Spine Runtimes
  * Guide. */
 class SkeletonData {
-    constructor() {
-        /** The skeleton's name, which by default is the name of the skeleton data file, if possible. May be null. */
-        this.name = null;
-        /** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
-        this.bones = new Array(); // Ordered parents first.
-        /** The skeleton's slots. */
-        this.slots = new Array(); // Setup pose draw order.
-        this.skins = new Array();
-        /** The skeleton's default skin. By default this skin contains all attachments that were not in a skin in Spine.
-         *
-         * See {@link Skeleton#getAttachmentByName()}.
-         * May be null. */
-        this.defaultSkin = null;
-        /** The skeleton's events. */
-        this.events = new Array();
-        /** The skeleton's animations. */
-        this.animations = new Array();
-        /** The skeleton's IK constraints. */
-        this.ikConstraints = new Array();
-        /** The skeleton's transform constraints. */
-        this.transformConstraints = new Array();
-        /** The skeleton's path constraints. */
-        this.pathConstraints = new Array();
-        /** The X coordinate of the skeleton's axis aligned bounding box in the setup pose. */
-        this.x = 0;
-        /** The Y coordinate of the skeleton's axis aligned bounding box in the setup pose. */
-        this.y = 0;
-        /** The width of the skeleton's axis aligned bounding box in the setup pose. */
-        this.width = 0;
-        /** The height of the skeleton's axis aligned bounding box in the setup pose. */
-        this.height = 0;
-        /** The Spine version used to export the skeleton data, or null. */
-        this.version = null;
-        /** The skeleton data hash. This value will change if any of the skeleton data has changed. May be null. */
-        this.hash = null;
-        // Nonessential
-        /** The dopesheet FPS in Spine. Available only when nonessential data was exported. */
-        this.fps = 0;
-        /** The path to the images directory as defined in Spine. Available only when nonessential data was exported. May be null. */
-        this.imagesPath = null;
-        /** The path to the audio directory as defined in Spine. Available only when nonessential data was exported. May be null. */
-        this.audioPath = null;
-    }
+    /** The skeleton's name, which by default is the name of the skeleton data file, if possible. May be null. */
+    name = null;
+    /** The skeleton's bones, sorted parent first. The root bone is always the first bone. */
+    bones = new Array(); // Ordered parents first.
+    /** The skeleton's slots in the setup pose draw order. */
+    slots = new Array(); // Setup pose draw order.
+    skins = new Array();
+    /** The skeleton's default skin. By default this skin contains all attachments that were not in a skin in Spine.
+     *
+     * See {@link Skeleton#getAttachmentByName()}.
+     * May be null. */
+    defaultSkin = null;
+    /** The skeleton's events. */
+    events = new Array();
+    /** The skeleton's animations. */
+    animations = new Array();
+    /** The skeleton's IK constraints. */
+    ikConstraints = new Array();
+    /** The skeleton's transform constraints. */
+    transformConstraints = new Array();
+    /** The skeleton's path constraints. */
+    pathConstraints = new Array();
+    /** The skeleton's physics constraints. */
+    physicsConstraints = new Array();
+    /** The X coordinate of the skeleton's axis aligned bounding box in the setup pose. */
+    x = 0;
+    /** The Y coordinate of the skeleton's axis aligned bounding box in the setup pose. */
+    y = 0;
+    /** The width of the skeleton's axis aligned bounding box in the setup pose. */
+    width = 0;
+    /** The height of the skeleton's axis aligned bounding box in the setup pose. */
+    height = 0;
+    /** Baseline scale factor for applying distance-dependent effects on non-scalable properties, such as angle or scale. Default
+     * is 100. */
+    referenceScale = 100;
+    /** The Spine version used to export the skeleton data, or null. */
+    version = null;
+    /** The skeleton data hash. This value will change if any of the skeleton data has changed. May be null. */
+    hash = null;
+    // Nonessential
+    /** The dopesheet FPS in Spine. Available only when nonessential data was exported. */
+    fps = 0;
+    /** The path to the images directory as defined in Spine. Available only when nonessential data was exported. May be null. */
+    imagesPath = null;
+    /** The path to the audio directory as defined in Spine. Available only when nonessential data was exported. May be null. */
+    audioPath = null;
     /** Finds a bone by comparing each bone's name. It is more efficient to cache the results of this method than to call it
      * multiple times.
      * @returns May be null. */
@@ -7794,9 +8627,9 @@ class SkeletonData {
     findIkConstraint(constraintName) {
         if (!constraintName)
             throw new Error("constraintName cannot be null.");
-        let ikConstraints = this.ikConstraints;
+        const ikConstraints = this.ikConstraints;
         for (let i = 0, n = ikConstraints.length; i < n; i++) {
-            let constraint = ikConstraints[i];
+            const constraint = ikConstraints[i];
             if (constraint.name == constraintName)
                 return constraint;
         }
@@ -7808,9 +8641,9 @@ class SkeletonData {
     findTransformConstraint(constraintName) {
         if (!constraintName)
             throw new Error("constraintName cannot be null.");
-        let transformConstraints = this.transformConstraints;
+        const transformConstraints = this.transformConstraints;
         for (let i = 0, n = transformConstraints.length; i < n; i++) {
-            let constraint = transformConstraints[i];
+            const constraint = transformConstraints[i];
             if (constraint.name == constraintName)
                 return constraint;
         }
@@ -7822,9 +8655,23 @@ class SkeletonData {
     findPathConstraint(constraintName) {
         if (!constraintName)
             throw new Error("constraintName cannot be null.");
-        let pathConstraints = this.pathConstraints;
+        const pathConstraints = this.pathConstraints;
         for (let i = 0, n = pathConstraints.length; i < n; i++) {
-            let constraint = pathConstraints[i];
+            const constraint = pathConstraints[i];
+            if (constraint.name == constraintName)
+                return constraint;
+        }
+        return null;
+    }
+    /** Finds a physics constraint by comparing each physics constraint's name. It is more efficient to cache the results of this method
+     * than to call it multiple times.
+     * @return May be null. */
+    findPhysicsConstraint(constraintName) {
+        if (!constraintName)
+            throw new Error("constraintName cannot be null.");
+        const physicsConstraints = this.physicsConstraints;
+        for (let i = 0, n = physicsConstraints.length; i < n; i++) {
+            const constraint = physicsConstraints[i];
             if (constraint.name == constraintName)
                 return constraint;
         }
@@ -7834,17 +8681,17 @@ class SkeletonData {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -7857,11 +8704,14 @@ class SkeletonData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores an entry in the skin consisting of the slot index, name, and attachment **/
 class SkinEntry {
+    slotIndex;
+    name;
+    attachment;
     constructor(slotIndex = 0, name, attachment) {
         this.slotIndex = slotIndex;
         this.name = name;
@@ -7873,10 +8723,14 @@ class SkinEntry {
  * See SkeletonData {@link SkeletonData#defaultSkin}, Skeleton {@link Skeleton#skin}, and
  * [Runtime skins](http://esotericsoftware.com/spine-runtime-skins) in the Spine Runtimes Guide. */
 class Skin {
+    /** The skin's name, which is unique across all skins in the skeleton. */
+    name;
+    attachments = new Array();
+    bones = Array();
+    constraints = new Array();
+    /** The color of the skin as it was in Spine, or a default color if nonessential data was not exported. */
+    color = new Color(0.99607843, 0.61960787, 0.30980393, 1); // fe9e4fff
     constructor(name) {
-        this.attachments = new Array();
-        this.bones = Array();
-        this.constraints = new Array();
         if (!name)
             throw new Error("name cannot be null.");
         this.name = name;
@@ -8034,17 +8888,17 @@ class Skin {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -8057,24 +8911,30 @@ class Skin {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link Slot}. */
 class SlotData {
+    /** The index of the slot in {@link Skeleton#getSlots()}. */
+    index = 0;
+    /** The name of the slot, which is unique across all slots in the skeleton. */
+    name;
+    /** The bone this slot belongs to. */
+    boneData;
+    /** The color used to tint the slot's attachment. If {@link #getDarkColor()} is set, this is used as the light color for two
+     * color tinting. */
+    color = new Color(1, 1, 1, 1);
+    /** The dark color used to tint the slot's attachment for two color tinting, or null if two color tinting is not used. The dark
+     * color's alpha is not used. */
+    darkColor = null;
+    /** The name of the attachment that is visible for this slot in the setup pose, or null if no attachment is visible. */
+    attachmentName = null;
+    /** The blend mode for drawing the slot's attachment. */
+    blendMode = BlendMode.Normal;
+    /** False if the slot was hidden in Spine and nonessential data was exported. Does not affect runtime rendering. */
+    visible = true;
     constructor(index, name, boneData) {
-        /** The index of the slot in {@link Skeleton#getSlots()}. */
-        this.index = 0;
-        /** The color used to tint the slot's attachment. If {@link #getDarkColor()} is set, this is used as the light color for two
-         * color tinting. */
-        this.color = new Color(1, 1, 1, 1);
-        /** The dark color used to tint the slot's attachment for two color tinting, or null if two color tinting is not used. The dark
-         * color's alpha is not used. */
-        this.darkColor = null;
-        /** The name of the attachment that is visible for this slot in the setup pose, or null if no attachment is visible. */
-        this.attachmentName = null;
-        /** The blend mode for drawing the slot's attachment. */
-        this.blendMode = BlendMode.Normal;
         if (index < 0)
             throw new Error("index must be >= 0.");
         if (!name)
@@ -8097,17 +8957,17 @@ var BlendMode;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -8120,13 +8980,17 @@ var BlendMode;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Stores the setup pose for a {@link TransformConstraint}.
  *
  * See [Transform constraints](http://esotericsoftware.com/spine-transform-constraints) in the Spine User Guide. */
 class TransformConstraintData extends ConstraintData {
+    /** The bones that will be modified by this transform constraint. */
+    bones = new Array();
+    /** The target bone whose world transform will be copied to the constrained bones. */
+    _target = null;
     set target(boneData) { this._target = boneData; }
     get target() {
         if (!this._target)
@@ -8134,48 +8998,44 @@ class TransformConstraintData extends ConstraintData {
         else
             return this._target;
     }
+    mixRotate = 0;
+    mixX = 0;
+    mixY = 0;
+    mixScaleX = 0;
+    mixScaleY = 0;
+    mixShearY = 0;
+    /** An offset added to the constrained bone rotation. */
+    offsetRotation = 0;
+    /** An offset added to the constrained bone X translation. */
+    offsetX = 0;
+    /** An offset added to the constrained bone Y translation. */
+    offsetY = 0;
+    /** An offset added to the constrained bone scaleX. */
+    offsetScaleX = 0;
+    /** An offset added to the constrained bone scaleY. */
+    offsetScaleY = 0;
+    /** An offset added to the constrained bone shearY. */
+    offsetShearY = 0;
+    relative = false;
+    local = false;
     constructor(name) {
         super(name, 0, false);
-        /** The bones that will be modified by this transform constraint. */
-        this.bones = new Array();
-        /** The target bone whose world transform will be copied to the constrained bones. */
-        this._target = null;
-        this.mixRotate = 0;
-        this.mixX = 0;
-        this.mixY = 0;
-        this.mixScaleX = 0;
-        this.mixScaleY = 0;
-        this.mixShearY = 0;
-        /** An offset added to the constrained bone rotation. */
-        this.offsetRotation = 0;
-        /** An offset added to the constrained bone X translation. */
-        this.offsetX = 0;
-        /** An offset added to the constrained bone Y translation. */
-        this.offsetY = 0;
-        /** An offset added to the constrained bone scaleX. */
-        this.offsetScaleX = 0;
-        /** An offset added to the constrained bone scaleY. */
-        this.offsetScaleY = 0;
-        /** An offset added to the constrained bone shearY. */
-        this.offsetShearY = 0;
-        this.relative = false;
-        this.local = false;
     }
 }
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -8188,8 +9048,8 @@ class TransformConstraintData extends ConstraintData {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Loads skeleton data in the Spine binary format.
  *
@@ -8197,13 +9057,14 @@ class TransformConstraintData extends ConstraintData {
  * [JSON and binary data](http://esotericsoftware.com/spine-loading-skeleton-data#JSON-and-binary-data) in the Spine
  * Runtimes Guide. */
 class SkeletonBinary {
+    /** Scales bone positions, image sizes, and translations as they are loaded. This allows different size images to be used at
+     * runtime than were used in Spine.
+     *
+     * See [Scaling](http://esotericsoftware.com/spine-loading-skeleton-data#Scaling) in the Spine Runtimes Guide. */
+    scale = 1;
+    attachmentLoader;
+    linkedMeshes = new Array();
     constructor(attachmentLoader) {
-        /** Scales bone positions, image sizes, and translations as they are loaded. This allows different size images to be used at
-         * runtime than were used in Spine.
-         *
-         * See [Scaling](http://esotericsoftware.com/spine-loading-skeleton-data#Scaling) in the Spine Runtimes Guide. */
-        this.scale = 1;
-        this.linkedMeshes = new Array();
         this.attachmentLoader = attachmentLoader;
     }
     readSkeletonData(binary) {
@@ -8219,6 +9080,7 @@ class SkeletonBinary {
         skeletonData.y = input.readFloat();
         skeletonData.width = input.readFloat();
         skeletonData.height = input.readFloat();
+        skeletonData.referenceScale = input.readFloat() * scale;
         let nonessential = input.readBoolean();
         if (nonessential) {
             skeletonData.fps = input.readFloat();
@@ -8250,10 +9112,13 @@ class SkeletonBinary {
             data.shearX = input.readFloat();
             data.shearY = input.readFloat();
             data.length = input.readFloat() * scale;
-            data.transformMode = input.readInt(true);
+            data.inherit = input.readByte();
             data.skinRequired = input.readBoolean();
-            if (nonessential)
+            if (nonessential) {
                 Color.rgba8888ToColor(data.color, input.readInt32());
+                data.icon = input.readString() ?? undefined;
+                data.visible = input.readBoolean();
+            }
             skeletonData.bones.push(data);
         }
         // Slots.
@@ -8270,6 +9135,8 @@ class SkeletonBinary {
                 Color.rgb888ToColor(data.darkColor = new Color(), darkColor);
             data.attachmentName = input.readStringRef();
             data.blendMode = input.readInt(true);
+            if (nonessential)
+                data.visible = input.readBoolean();
             skeletonData.slots.push(data);
         }
         // IK constraints.
@@ -8280,17 +9147,20 @@ class SkeletonBinary {
                 throw new Error("IK constraint data name must not be null.");
             let data = new IkConstraintData(name);
             data.order = input.readInt(true);
-            data.skinRequired = input.readBoolean();
             nn = input.readInt(true);
             for (let ii = 0; ii < nn; ii++)
                 data.bones.push(skeletonData.bones[input.readInt(true)]);
             data.target = skeletonData.bones[input.readInt(true)];
-            data.mix = input.readFloat();
-            data.softness = input.readFloat() * scale;
-            data.bendDirection = input.readByte();
-            data.compress = input.readBoolean();
-            data.stretch = input.readBoolean();
-            data.uniform = input.readBoolean();
+            let flags = input.readByte();
+            data.skinRequired = (flags & 1) != 0;
+            data.bendDirection = (flags & 2) != 0 ? 1 : -1;
+            data.compress = (flags & 4) != 0;
+            data.stretch = (flags & 8) != 0;
+            data.uniform = (flags & 16) != 0;
+            if ((flags & 32) != 0)
+                data.mix = (flags & 64) != 0 ? input.readFloat() : 1;
+            if ((flags & 128) != 0)
+                data.softness = input.readFloat() * scale;
             skeletonData.ikConstraints.push(data);
         }
         // Transform constraints.
@@ -8301,25 +9171,39 @@ class SkeletonBinary {
                 throw new Error("Transform constraint data name must not be null.");
             let data = new TransformConstraintData(name);
             data.order = input.readInt(true);
-            data.skinRequired = input.readBoolean();
             nn = input.readInt(true);
             for (let ii = 0; ii < nn; ii++)
                 data.bones.push(skeletonData.bones[input.readInt(true)]);
             data.target = skeletonData.bones[input.readInt(true)];
-            data.local = input.readBoolean();
-            data.relative = input.readBoolean();
-            data.offsetRotation = input.readFloat();
-            data.offsetX = input.readFloat() * scale;
-            data.offsetY = input.readFloat() * scale;
-            data.offsetScaleX = input.readFloat();
-            data.offsetScaleY = input.readFloat();
-            data.offsetShearY = input.readFloat();
-            data.mixRotate = input.readFloat();
-            data.mixX = input.readFloat();
-            data.mixY = input.readFloat();
-            data.mixScaleX = input.readFloat();
-            data.mixScaleY = input.readFloat();
-            data.mixShearY = input.readFloat();
+            let flags = input.readByte();
+            data.skinRequired = (flags & 1) != 0;
+            data.local = (flags & 2) != 0;
+            data.relative = (flags & 4) != 0;
+            if ((flags & 8) != 0)
+                data.offsetRotation = input.readFloat();
+            if ((flags & 16) != 0)
+                data.offsetX = input.readFloat() * scale;
+            if ((flags & 32) != 0)
+                data.offsetY = input.readFloat() * scale;
+            if ((flags & 64) != 0)
+                data.offsetScaleX = input.readFloat();
+            if ((flags & 128) != 0)
+                data.offsetScaleY = input.readFloat();
+            flags = input.readByte();
+            if ((flags & 1) != 0)
+                data.offsetShearY = input.readFloat();
+            if ((flags & 2) != 0)
+                data.mixRotate = input.readFloat();
+            if ((flags & 4) != 0)
+                data.mixX = input.readFloat();
+            if ((flags & 8) != 0)
+                data.mixY = input.readFloat();
+            if ((flags & 16) != 0)
+                data.mixScaleX = input.readFloat();
+            if ((flags & 32) != 0)
+                data.mixScaleY = input.readFloat();
+            if ((flags & 64) != 0)
+                data.mixShearY = input.readFloat();
             skeletonData.transformConstraints.push(data);
         }
         // Path constraints.
@@ -8335,10 +9219,12 @@ class SkeletonBinary {
             for (let ii = 0; ii < nn; ii++)
                 data.bones.push(skeletonData.bones[input.readInt(true)]);
             data.target = skeletonData.slots[input.readInt(true)];
-            data.positionMode = input.readInt(true);
-            data.spacingMode = input.readInt(true);
-            data.rotateMode = input.readInt(true);
-            data.offsetRotation = input.readFloat();
+            const flags = input.readByte();
+            data.positionMode = flags & 1;
+            data.spacingMode = (flags >> 1) & 3;
+            data.rotateMode = (flags >> 3) & 3;
+            if ((flags & 128) != 0)
+                data.offsetRotation = input.readFloat();
             data.position = input.readFloat();
             if (data.positionMode == PositionMode.Fixed)
                 data.position *= scale;
@@ -8349,6 +9235,53 @@ class SkeletonBinary {
             data.mixX = input.readFloat();
             data.mixY = input.readFloat();
             skeletonData.pathConstraints.push(data);
+        }
+        // Physics constraints.
+        n = input.readInt(true);
+        for (let i = 0, nn; i < n; i++) {
+            const name = input.readString();
+            if (!name)
+                throw new Error("Physics constraint data name must not be null.");
+            const data = new PhysicsConstraintData(name);
+            data.order = input.readInt(true);
+            data.bone = skeletonData.bones[input.readInt(true)];
+            let flags = input.readByte();
+            data.skinRequired = (flags & 1) != 0;
+            if ((flags & 2) != 0)
+                data.x = input.readFloat();
+            if ((flags & 4) != 0)
+                data.y = input.readFloat();
+            if ((flags & 8) != 0)
+                data.rotate = input.readFloat();
+            if ((flags & 16) != 0)
+                data.scaleX = input.readFloat();
+            if ((flags & 32) != 0)
+                data.shearX = input.readFloat();
+            data.limit = ((flags & 64) != 0 ? input.readFloat() : 5000) * scale;
+            data.step = 1 / input.readUnsignedByte();
+            data.inertia = input.readFloat();
+            data.strength = input.readFloat();
+            data.damping = input.readFloat();
+            data.massInverse = (flags & 128) != 0 ? input.readFloat() : 1;
+            data.wind = input.readFloat();
+            data.gravity = input.readFloat();
+            flags = input.readByte();
+            if ((flags & 1) != 0)
+                data.inertiaGlobal = true;
+            if ((flags & 2) != 0)
+                data.strengthGlobal = true;
+            if ((flags & 4) != 0)
+                data.dampingGlobal = true;
+            if ((flags & 8) != 0)
+                data.massGlobal = true;
+            if ((flags & 16) != 0)
+                data.windGlobal = true;
+            if ((flags & 32) != 0)
+                data.gravityGlobal = true;
+            if ((flags & 64) != 0)
+                data.mixGlobal = true;
+            data.mix = (flags & 128) != 0 ? input.readFloat() : 1;
+            skeletonData.physicsConstraints.push(data);
         }
         // Default skin.
         let defaultSkin = this.readSkin(input, skeletonData, true, nonessential);
@@ -8371,9 +9304,7 @@ class SkeletonBinary {
         n = this.linkedMeshes.length;
         for (let i = 0; i < n; i++) {
             let linkedMesh = this.linkedMeshes[i];
-            let skin = !linkedMesh.skin ? skeletonData.defaultSkin : skeletonData.findSkin(linkedMesh.skin);
-            if (!skin)
-                throw new Error("Not skin found for linked mesh.");
+            const skin = skeletonData.skins[linkedMesh.skinIndex];
             if (!linkedMesh.parent)
                 throw new Error("Linked mesh parent must not be null");
             let parent = skin.getAttachment(linkedMesh.slotIndex, linkedMesh.parent);
@@ -8388,9 +9319,9 @@ class SkeletonBinary {
         // Events.
         n = input.readInt(true);
         for (let i = 0; i < n; i++) {
-            let eventName = input.readStringRef();
+            let eventName = input.readString();
             if (!eventName)
-                throw new Error;
+                throw new Error("Event data name must not be null");
             let data = new EventData(eventName);
             data.intValue = input.readInt(false);
             data.floatValue = input.readFloat();
@@ -8422,10 +9353,12 @@ class SkeletonBinary {
             skin = new Skin("default");
         }
         else {
-            let skinName = input.readStringRef();
+            let skinName = input.readString();
             if (!skinName)
                 throw new Error("Skin name must not be null.");
             skin = new Skin(skinName);
+            if (nonessential)
+                Color.rgba8888ToColor(skin.color, input.readInt32());
             skin.bones.length = input.readInt(true);
             for (let i = 0, n = skin.bones.length; i < n; i++)
                 skin.bones[i] = skeletonData.bones[input.readInt(true)];
@@ -8435,6 +9368,8 @@ class SkeletonBinary {
                 skin.constraints.push(skeletonData.transformConstraints[input.readInt(true)]);
             for (let i = 0, n = input.readInt(true); i < n; i++)
                 skin.constraints.push(skeletonData.pathConstraints[input.readInt(true)]);
+            for (let i = 0, n = input.readInt(true); i < n; i++)
+                skin.constraints.push(skeletonData.physicsConstraints[input.readInt(true)]);
             slotCount = input.readInt(true);
         }
         for (let i = 0; i < slotCount; i++) {
@@ -8452,21 +9387,22 @@ class SkeletonBinary {
     }
     readAttachment(input, skeletonData, skin, slotIndex, attachmentName, nonessential) {
         let scale = this.scale;
-        let name = input.readStringRef();
+        let flags = input.readByte();
+        const name = (flags & 8) != 0 ? input.readStringRef() : attachmentName;
         if (!name)
-            name = attachmentName;
-        switch (input.readByte()) {
+            throw new Error("Attachment name must not be null");
+        switch ((flags & 0b111)) { // BUG?
             case AttachmentType.Region: {
-                let path = input.readStringRef();
-                let rotation = input.readFloat();
+                let path = (flags & 16) != 0 ? input.readStringRef() : null;
+                const color = (flags & 32) != 0 ? input.readInt32() : 0xffffffff;
+                const sequence = (flags & 64) != 0 ? this.readSequence(input) : null;
+                let rotation = (flags & 128) != 0 ? input.readFloat() : 0;
                 let x = input.readFloat();
                 let y = input.readFloat();
                 let scaleX = input.readFloat();
                 let scaleY = input.readFloat();
                 let width = input.readFloat();
                 let height = input.readFloat();
-                let color = input.readInt32();
-                let sequence = this.readSequence(input);
                 if (!path)
                     path = name;
                 let region = this.attachmentLoader.newRegionAttachment(skin, name, path, sequence);
@@ -8487,13 +9423,12 @@ class SkeletonBinary {
                 return region;
             }
             case AttachmentType.BoundingBox: {
-                let vertexCount = input.readInt(true);
-                let vertices = this.readVertices(input, vertexCount);
+                let vertices = this.readVertices(input, (flags & 16) != 0);
                 let color = nonessential ? input.readInt32() : 0;
                 let box = this.attachmentLoader.newBoundingBoxAttachment(skin, name);
                 if (!box)
                     return null;
-                box.worldVerticesLength = vertexCount << 1;
+                box.worldVerticesLength = vertices.length;
                 box.vertices = vertices.vertices;
                 box.bones = vertices.bones;
                 if (nonessential)
@@ -8501,18 +9436,17 @@ class SkeletonBinary {
                 return box;
             }
             case AttachmentType.Mesh: {
-                let path = input.readStringRef();
-                let color = input.readInt32();
-                let vertexCount = input.readInt(true);
-                let uvs = this.readFloatArray(input, vertexCount << 1, 1);
-                let triangles = this.readShortArray(input);
-                let vertices = this.readVertices(input, vertexCount);
-                let hullLength = input.readInt(true);
-                let sequence = this.readSequence(input);
+                let path = (flags & 16) != 0 ? input.readStringRef() : name;
+                const color = (flags & 32) != 0 ? input.readInt32() : 0xffffffff;
+                const sequence = (flags & 64) != 0 ? this.readSequence(input) : null;
+                const hullLength = input.readInt(true);
+                const vertices = this.readVertices(input, (flags & 128) != 0);
+                const uvs = this.readFloatArray(input, vertices.length, 1);
+                const triangles = this.readShortArray(input, (vertices.length - hullLength - 2) * 3);
                 let edges = [];
                 let width = 0, height = 0;
                 if (nonessential) {
-                    edges = this.readShortArray(input);
+                    edges = this.readShortArray(input, input.readInt(true));
                     width = input.readFloat();
                     height = input.readFloat();
                 }
@@ -8525,7 +9459,7 @@ class SkeletonBinary {
                 Color.rgba8888ToColor(mesh.color, color);
                 mesh.bones = vertices.bones;
                 mesh.vertices = vertices.vertices;
-                mesh.worldVerticesLength = vertexCount << 1;
+                mesh.worldVerticesLength = vertices.length;
                 mesh.triangles = triangles;
                 mesh.regionUVs = uvs;
                 if (sequence == null)
@@ -8540,19 +9474,19 @@ class SkeletonBinary {
                 return mesh;
             }
             case AttachmentType.LinkedMesh: {
-                let path = input.readStringRef();
-                let color = input.readInt32();
-                let skinName = input.readStringRef();
-                let parent = input.readStringRef();
-                let inheritTimelines = input.readBoolean();
-                let sequence = this.readSequence(input);
+                const path = (flags & 16) != 0 ? input.readStringRef() : name;
+                if (path == null)
+                    throw new Error("Path of linked mesh must not be null");
+                const color = (flags & 32) != 0 ? input.readInt32() : 0xffffffff;
+                const sequence = (flags & 64) != 0 ? this.readSequence(input) : null;
+                const inheritTimelines = (flags & 128) != 0;
+                const skinIndex = input.readInt(true);
+                const parent = input.readStringRef();
                 let width = 0, height = 0;
                 if (nonessential) {
                     width = input.readFloat();
                     height = input.readFloat();
                 }
-                if (!path)
-                    path = name;
                 let mesh = this.attachmentLoader.newMeshAttachment(skin, name, path, sequence);
                 if (!mesh)
                     return null;
@@ -8563,24 +9497,23 @@ class SkeletonBinary {
                     mesh.width = width * scale;
                     mesh.height = height * scale;
                 }
-                this.linkedMeshes.push(new LinkedMesh$1(mesh, skinName, slotIndex, parent, inheritTimelines));
+                this.linkedMeshes.push(new LinkedMesh$1(mesh, skinIndex, slotIndex, parent, inheritTimelines));
                 return mesh;
             }
             case AttachmentType.Path: {
-                let closed = input.readBoolean();
-                let constantSpeed = input.readBoolean();
-                let vertexCount = input.readInt(true);
-                let vertices = this.readVertices(input, vertexCount);
-                let lengths = Utils.newArray(vertexCount / 3, 0);
+                const closed = (flags & 16) != 0;
+                const constantSpeed = (flags & 32) != 0;
+                const vertices = this.readVertices(input, (flags & 64) != 0);
+                const lengths = Utils.newArray(vertices.length / 6, 0);
                 for (let i = 0, n = lengths.length; i < n; i++)
                     lengths[i] = input.readFloat() * scale;
-                let color = nonessential ? input.readInt32() : 0;
-                let path = this.attachmentLoader.newPathAttachment(skin, name);
+                const color = nonessential ? input.readInt32() : 0;
+                const path = this.attachmentLoader.newPathAttachment(skin, name);
                 if (!path)
                     return null;
                 path.closed = closed;
                 path.constantSpeed = constantSpeed;
-                path.worldVerticesLength = vertexCount << 1;
+                path.worldVerticesLength = vertices.length;
                 path.vertices = vertices.vertices;
                 path.bones = vertices.bones;
                 path.lengths = lengths;
@@ -8589,11 +9522,11 @@ class SkeletonBinary {
                 return path;
             }
             case AttachmentType.Point: {
-                let rotation = input.readFloat();
-                let x = input.readFloat();
-                let y = input.readFloat();
-                let color = nonessential ? input.readInt32() : 0;
-                let point = this.attachmentLoader.newPointAttachment(skin, name);
+                const rotation = input.readFloat();
+                const x = input.readFloat();
+                const y = input.readFloat();
+                const color = nonessential ? input.readInt32() : 0;
+                const point = this.attachmentLoader.newPointAttachment(skin, name);
                 if (!point)
                     return null;
                 point.x = x * scale;
@@ -8604,15 +9537,14 @@ class SkeletonBinary {
                 return point;
             }
             case AttachmentType.Clipping: {
-                let endSlotIndex = input.readInt(true);
-                let vertexCount = input.readInt(true);
-                let vertices = this.readVertices(input, vertexCount);
+                const endSlotIndex = input.readInt(true);
+                const vertices = this.readVertices(input, (flags & 16) != 0);
                 let color = nonessential ? input.readInt32() : 0;
                 let clip = this.attachmentLoader.newClippingAttachment(skin, name);
                 if (!clip)
                     return null;
                 clip.endSlot = skeletonData.slots[endSlotIndex];
-                clip.worldVerticesLength = vertexCount << 1;
+                clip.worldVerticesLength = vertices.length;
                 clip.vertices = vertices.vertices;
                 clip.bones = vertices.bones;
                 if (nonessential)
@@ -8623,20 +9555,19 @@ class SkeletonBinary {
         return null;
     }
     readSequence(input) {
-        if (!input.readBoolean())
-            return null;
         let sequence = new Sequence(input.readInt(true));
         sequence.start = input.readInt(true);
         sequence.digits = input.readInt(true);
         sequence.setupIndex = input.readInt(true);
         return sequence;
     }
-    readVertices(input, vertexCount) {
-        let scale = this.scale;
-        let verticesLength = vertexCount << 1;
-        let vertices = new Vertices();
-        if (!input.readBoolean()) {
-            vertices.vertices = this.readFloatArray(input, verticesLength, scale);
+    readVertices(input, weighted) {
+        const scale = this.scale;
+        const vertexCount = input.readInt(true);
+        const vertices = new Vertices();
+        vertices.length = vertexCount << 1;
+        if (!weighted) {
+            vertices.vertices = this.readFloatArray(input, vertices.length, scale);
             return vertices;
         }
         let weights = new Array();
@@ -8667,19 +9598,16 @@ class SkeletonBinary {
         }
         return array;
     }
-    readShortArray(input) {
-        let n = input.readInt(true);
+    readShortArray(input, n) {
         let array = new Array(n);
         for (let i = 0; i < n; i++)
-            array[i] = input.readShort();
+            array[i] = input.readInt(true);
         return array;
     }
     readAnimation(input, name, skeletonData) {
         input.readInt(true); // Number of timelines.
         let timelines = new Array();
         let scale = this.scale;
-        let tempColor1 = new Color();
-        let tempColor2 = new Color();
         // Slot timelines.
         for (let i = 0, n = input.readInt(true); i < n; i++) {
             let slotIndex = input.readInt(true);
@@ -8883,7 +9811,16 @@ class SkeletonBinary {
         for (let i = 0, n = input.readInt(true); i < n; i++) {
             let boneIndex = input.readInt(true);
             for (let ii = 0, nn = input.readInt(true); ii < nn; ii++) {
-                let type = input.readByte(), frameCount = input.readInt(true), bezierCount = input.readInt(true);
+                let type = input.readByte(), frameCount = input.readInt(true);
+                if (type == BONE_INHERIT) {
+                    let timeline = new InheritTimeline(frameCount, boneIndex);
+                    for (let frame = 0; frame < frameCount; frame++) {
+                        timeline.setFrame(frame, input.readFloat(), input.readByte());
+                    }
+                    timelines.push(timeline);
+                    continue;
+                }
+                let bezierCount = input.readInt(true);
                 switch (type) {
                     case BONE_ROTATE:
                         timelines.push(readTimeline1$1(input, new RotateTimeline(frameCount, bezierCount, boneIndex), 1));
@@ -8921,19 +9858,22 @@ class SkeletonBinary {
         for (let i = 0, n = input.readInt(true); i < n; i++) {
             let index = input.readInt(true), frameCount = input.readInt(true), frameLast = frameCount - 1;
             let timeline = new IkConstraintTimeline(frameCount, input.readInt(true), index);
-            let time = input.readFloat(), mix = input.readFloat(), softness = input.readFloat() * scale;
+            let flags = input.readByte();
+            let time = input.readFloat(), mix = (flags & 1) != 0 ? ((flags & 2) != 0 ? input.readFloat() : 1) : 0;
+            let softness = (flags & 4) != 0 ? input.readFloat() * scale : 0;
             for (let frame = 0, bezier = 0;; frame++) {
-                timeline.setFrame(frame, time, mix, softness, input.readByte(), input.readBoolean(), input.readBoolean());
+                timeline.setFrame(frame, time, mix, softness, (flags & 8) != 0 ? 1 : -1, (flags & 16) != 0, (flags & 32) != 0);
                 if (frame == frameLast)
                     break;
-                let time2 = input.readFloat(), mix2 = input.readFloat(), softness2 = input.readFloat() * scale;
-                switch (input.readByte()) {
-                    case CURVE_STEPPED:
-                        timeline.setStepped(frame);
-                        break;
-                    case CURVE_BEZIER:
-                        setBezier(input, timeline, bezier++, frame, 0, time, time2, mix, mix2, 1);
-                        setBezier(input, timeline, bezier++, frame, 1, time, time2, softness, softness2, scale);
+                flags = input.readByte();
+                const time2 = input.readFloat(), mix2 = (flags & 1) != 0 ? ((flags & 2) != 0 ? input.readFloat() : 1) : 0;
+                const softness2 = (flags & 4) != 0 ? input.readFloat() * scale : 0;
+                if ((flags & 64) != 0) {
+                    timeline.setStepped(frame);
+                }
+                else if ((flags & 128) != 0) {
+                    setBezier(input, timeline, bezier++, frame, 0, time, time2, mix, mix2, 1);
+                    setBezier(input, timeline, bezier++, frame, 1, time, time2, softness, softness2, scale);
                 }
                 time = time2;
                 mix = mix2;
@@ -8978,17 +9918,18 @@ class SkeletonBinary {
             let index = input.readInt(true);
             let data = skeletonData.pathConstraints[index];
             for (let ii = 0, nn = input.readInt(true); ii < nn; ii++) {
-                switch (input.readByte()) {
+                const type = input.readByte(), frameCount = input.readInt(true), bezierCount = input.readInt(true);
+                switch (type) {
                     case PATH_POSITION:
                         timelines
-                            .push(readTimeline1$1(input, new PathConstraintPositionTimeline(input.readInt(true), input.readInt(true), index), data.positionMode == PositionMode.Fixed ? scale : 1));
+                            .push(readTimeline1$1(input, new PathConstraintPositionTimeline(frameCount, bezierCount, index), data.positionMode == PositionMode.Fixed ? scale : 1));
                         break;
                     case PATH_SPACING:
                         timelines
-                            .push(readTimeline1$1(input, new PathConstraintSpacingTimeline(input.readInt(true), input.readInt(true), index), data.spacingMode == SpacingMode.Length || data.spacingMode == SpacingMode.Fixed ? scale : 1));
+                            .push(readTimeline1$1(input, new PathConstraintSpacingTimeline(frameCount, bezierCount, index), data.spacingMode == SpacingMode.Length || data.spacingMode == SpacingMode.Fixed ? scale : 1));
                         break;
                     case PATH_MIX:
-                        let timeline = new PathConstraintMixTimeline(input.readInt(true), input.readInt(true), index);
+                        let timeline = new PathConstraintMixTimeline(frameCount, bezierCount, index);
                         let time = input.readFloat(), mixRotate = input.readFloat(), mixX = input.readFloat(), mixY = input.readFloat();
                         for (let frame = 0, bezier = 0, frameLast = timeline.getFrameCount() - 1;; frame++) {
                             timeline.setFrame(frame, time, mixRotate, mixX, mixY);
@@ -9010,6 +9951,43 @@ class SkeletonBinary {
                             mixY = mixY2;
                         }
                         timelines.push(timeline);
+                }
+            }
+        }
+        // Physics timelines.
+        for (let i = 0, n = input.readInt(true); i < n; i++) {
+            const index = input.readInt(true) - 1;
+            for (let ii = 0, nn = input.readInt(true); ii < nn; ii++) {
+                const type = input.readByte(), frameCount = input.readInt(true);
+                if (type == PHYSICS_RESET) {
+                    const timeline = new PhysicsConstraintResetTimeline(frameCount, index);
+                    for (let frame = 0; frame < frameCount; frame++)
+                        timeline.setFrame(frame, input.readFloat());
+                    timelines.push(timeline);
+                    continue;
+                }
+                const bezierCount = input.readInt(true);
+                switch (type) {
+                    case PHYSICS_INERTIA:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintInertiaTimeline(frameCount, bezierCount, index), 1));
+                        break;
+                    case PHYSICS_STRENGTH:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintStrengthTimeline(frameCount, bezierCount, index), 1));
+                        break;
+                    case PHYSICS_DAMPING:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintDampingTimeline(frameCount, bezierCount, index), 1));
+                        break;
+                    case PHYSICS_MASS:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintMassTimeline(frameCount, bezierCount, index), 1));
+                        break;
+                    case PHYSICS_WIND:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintWindTimeline(frameCount, bezierCount, index), 1));
+                        break;
+                    case PHYSICS_GRAVITY:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintGravityTimeline(frameCount, bezierCount, index), 1));
+                        break;
+                    case PHYSICS_MIX:
+                        timelines.push(readTimeline1$1(input, new PhysicsConstraintMixTimeline(frameCount, bezierCount, index), 1));
                 }
             }
         }
@@ -9129,7 +10107,9 @@ class SkeletonBinary {
                 let event = new Event(time, eventData);
                 event.intValue = input.readInt(false);
                 event.floatValue = input.readFloat();
-                event.stringValue = input.readBoolean() ? input.readString() : eventData.stringValue;
+                event.stringValue = input.readString();
+                if (event.stringValue == null)
+                    event.stringValue = eventData.stringValue;
                 if (event.data.audioPath) {
                     event.volume = input.readFloat();
                     event.balance = input.readFloat();
@@ -9145,7 +10125,10 @@ class SkeletonBinary {
     }
 }
 class BinaryInput {
-    constructor(data, strings = new Array(), index = 0, buffer = new DataView(data.buffer)) {
+    strings;
+    index;
+    buffer;
+    constructor(data, strings = new Array(), index = 0, buffer = new DataView(data instanceof ArrayBuffer ? data : data.buffer)) {
         this.strings = strings;
         this.index = index;
         this.buffer = buffer;
@@ -9231,18 +10214,27 @@ class BinaryInput {
     }
 }
 let LinkedMesh$1 = class LinkedMesh {
-    constructor(mesh, skin, slotIndex, parent, inheritDeform) {
+    parent;
+    skinIndex;
+    slotIndex;
+    mesh;
+    inheritTimeline;
+    constructor(mesh, skinIndex, slotIndex, parent, inheritDeform) {
         this.mesh = mesh;
-        this.skin = skin;
+        this.skinIndex = skinIndex;
         this.slotIndex = slotIndex;
         this.parent = parent;
         this.inheritTimeline = inheritDeform;
     }
 };
 class Vertices {
-    constructor(bones = null, vertices = null) {
+    bones;
+    vertices;
+    length;
+    constructor(bones = null, vertices = null, length = 0) {
         this.bones = bones;
         this.vertices = vertices;
+        this.length = length;
     }
 }
 var AttachmentType;
@@ -9308,6 +10300,7 @@ const BONE_SCALEY = 6;
 const BONE_SHEAR = 7;
 const BONE_SHEARX = 8;
 const BONE_SHEARY = 9;
+const BONE_INHERIT = 10;
 const SLOT_ATTACHMENT = 0;
 const SLOT_RGBA = 1;
 const SLOT_RGB = 2;
@@ -9319,23 +10312,31 @@ const ATTACHMENT_SEQUENCE = 1;
 const PATH_POSITION = 0;
 const PATH_SPACING = 1;
 const PATH_MIX = 2;
+const PHYSICS_INERTIA = 0;
+const PHYSICS_STRENGTH = 1;
+const PHYSICS_DAMPING = 2;
+const PHYSICS_MASS = 4;
+const PHYSICS_WIND = 5;
+const PHYSICS_GRAVITY = 6;
+const PHYSICS_MIX = 7;
+const PHYSICS_RESET = 8;
 const CURVE_LINEAR = 0;
 const CURVE_STEPPED = 1;
 const CURVE_BEZIER = 2;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -9348,29 +10349,27 @@ const CURVE_BEZIER = 2;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Collects each visible {@link BoundingBoxAttachment} and computes the world vertices for its polygon. The polygon vertices are
  * provided along with convenience methods for doing hit detection. */
 class SkeletonBounds {
-    constructor() {
-        /** The left edge of the axis aligned bounding box. */
-        this.minX = 0;
-        /** The bottom edge of the axis aligned bounding box. */
-        this.minY = 0;
-        /** The right edge of the axis aligned bounding box. */
-        this.maxX = 0;
-        /** The top edge of the axis aligned bounding box. */
-        this.maxY = 0;
-        /** The visible bounding boxes. */
-        this.boundingBoxes = new Array();
-        /** The world vertices for the bounding box polygons. */
-        this.polygons = new Array();
-        this.polygonPool = new Pool(() => {
-            return Utils.newFloatArray(16);
-        });
-    }
+    /** The left edge of the axis aligned bounding box. */
+    minX = 0;
+    /** The bottom edge of the axis aligned bounding box. */
+    minY = 0;
+    /** The right edge of the axis aligned bounding box. */
+    maxX = 0;
+    /** The top edge of the axis aligned bounding box. */
+    maxY = 0;
+    /** The visible bounding boxes. */
+    boundingBoxes = new Array();
+    /** The world vertices for the bounding box polygons. */
+    polygons = new Array();
+    polygonPool = new Pool(() => {
+        return Utils.newFloatArray(16);
+    });
     /** Clears any previous polygons, finds all visible bounding box attachments, and computes the world vertices for each bounding
      * box's polygon.
      * @param updateAabb If true, the axis aligned bounding box containing all the polygons is computed. If false, the
@@ -9542,17 +10541,17 @@ class SkeletonBounds {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -9565,23 +10564,21 @@ class SkeletonBounds {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Triangulator {
-    constructor() {
-        this.convexPolygons = new Array();
-        this.convexPolygonsIndices = new Array();
-        this.indicesArray = new Array();
-        this.isConcaveArray = new Array();
-        this.triangles = new Array();
-        this.polygonPool = new Pool(() => {
-            return new Array();
-        });
-        this.polygonIndicesPool = new Pool(() => {
-            return new Array();
-        });
-    }
+    convexPolygons = new Array();
+    convexPolygonsIndices = new Array();
+    indicesArray = new Array();
+    isConcaveArray = new Array();
+    triangles = new Array();
+    polygonPool = new Pool(() => {
+        return new Array();
+    });
+    polygonIndicesPool = new Pool(() => {
+        return new Array();
+    });
     triangulate(verticesArray) {
         let vertices = verticesArray;
         let vertexCount = verticesArray.length >> 1;
@@ -9785,17 +10782,17 @@ class Triangulator {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -9808,20 +10805,19 @@ class Triangulator {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class SkeletonClipping {
-    constructor() {
-        this.triangulator = new Triangulator();
-        this.clippingPolygon = new Array();
-        this.clipOutput = new Array();
-        this.clippedVertices = new Array();
-        this.clippedTriangles = new Array();
-        this.scratch = new Array();
-        this.clipAttachment = null;
-        this.clippingPolygons = null;
-    }
+    triangulator = new Triangulator();
+    clippingPolygon = new Array();
+    clipOutput = new Array();
+    clippedVertices = new Array();
+    clippedUVs = new Array();
+    clippedTriangles = new Array();
+    scratch = new Array();
+    clipAttachment = null;
+    clippingPolygons = null;
     clipStart(slot, clip) {
         if (this.clipAttachment)
             return 0;
@@ -9856,7 +10852,94 @@ class SkeletonClipping {
     isClipping() {
         return this.clipAttachment != null;
     }
-    clipTriangles(vertices, verticesLength, triangles, trianglesLength, uvs, light, dark, twoColor) {
+    clipTriangles(vertices, verticesLengthOrTriangles, trianglesOrTrianglesLength, trianglesLengthOrUvs, uvsOrLight, lightOrDark, darkOrTwoColor, twoColorParam) {
+        // Determine which overload is being used
+        let triangles;
+        let trianglesLength;
+        let uvs;
+        let light;
+        let dark;
+        let twoColor;
+        if (typeof verticesLengthOrTriangles === 'number') {
+            triangles = trianglesOrTrianglesLength;
+            trianglesLength = trianglesLengthOrUvs;
+            uvs = uvsOrLight;
+            light = lightOrDark;
+            dark = darkOrTwoColor;
+            twoColor = twoColorParam;
+        }
+        else {
+            triangles = verticesLengthOrTriangles;
+            trianglesLength = trianglesOrTrianglesLength;
+            uvs = trianglesLengthOrUvs;
+            light = uvsOrLight;
+            dark = lightOrDark;
+            twoColor = darkOrTwoColor;
+        }
+        if (uvs && light && dark && typeof twoColor === 'boolean')
+            this.clipTrianglesRender(vertices, triangles, trianglesLength, uvs, light, dark, twoColor);
+        else
+            this.clipTrianglesNoRender(vertices, triangles, trianglesLength);
+    }
+    clipTrianglesNoRender(vertices, triangles, trianglesLength) {
+        let clipOutput = this.clipOutput, clippedVertices = this.clippedVertices;
+        let clippedTriangles = this.clippedTriangles;
+        let polygons = this.clippingPolygons;
+        let polygonsCount = polygons.length;
+        let index = 0;
+        clippedVertices.length = 0;
+        clippedTriangles.length = 0;
+        for (let i = 0; i < trianglesLength; i += 3) {
+            let vertexOffset = triangles[i] << 1;
+            let x1 = vertices[vertexOffset], y1 = vertices[vertexOffset + 1];
+            vertexOffset = triangles[i + 1] << 1;
+            let x2 = vertices[vertexOffset], y2 = vertices[vertexOffset + 1];
+            vertexOffset = triangles[i + 2] << 1;
+            let x3 = vertices[vertexOffset], y3 = vertices[vertexOffset + 1];
+            for (let p = 0; p < polygonsCount; p++) {
+                let s = clippedVertices.length;
+                if (this.clip(x1, y1, x2, y2, x3, y3, polygons[p], clipOutput)) {
+                    let clipOutputLength = clipOutput.length;
+                    if (clipOutputLength == 0)
+                        continue;
+                    let clipOutputCount = clipOutputLength >> 1;
+                    let clipOutputItems = this.clipOutput;
+                    let clippedVerticesItems = Utils.setArraySize(clippedVertices, s + clipOutputCount * 2);
+                    for (let ii = 0; ii < clipOutputLength; ii += 2, s += 2) {
+                        let x = clipOutputItems[ii], y = clipOutputItems[ii + 1];
+                        clippedVerticesItems[s] = x;
+                        clippedVerticesItems[s + 1] = y;
+                    }
+                    s = clippedTriangles.length;
+                    let clippedTrianglesItems = Utils.setArraySize(clippedTriangles, s + 3 * (clipOutputCount - 2));
+                    clipOutputCount--;
+                    for (let ii = 1; ii < clipOutputCount; ii++, s += 3) {
+                        clippedTrianglesItems[s] = index;
+                        clippedTrianglesItems[s + 1] = (index + ii);
+                        clippedTrianglesItems[s + 2] = (index + ii + 1);
+                    }
+                    index += clipOutputCount + 1;
+                }
+                else {
+                    let clippedVerticesItems = Utils.setArraySize(clippedVertices, s + 3 * 2);
+                    clippedVerticesItems[s] = x1;
+                    clippedVerticesItems[s + 1] = y1;
+                    clippedVerticesItems[s + 2] = x2;
+                    clippedVerticesItems[s + 3] = y2;
+                    clippedVerticesItems[s + 4] = x3;
+                    clippedVerticesItems[s + 5] = y3;
+                    s = clippedTriangles.length;
+                    let clippedTrianglesItems = Utils.setArraySize(clippedTriangles, s + 3);
+                    clippedTrianglesItems[s] = index;
+                    clippedTrianglesItems[s + 1] = (index + 1);
+                    clippedTrianglesItems[s + 2] = (index + 2);
+                    index += 3;
+                    break;
+                }
+            }
+        }
+    }
+    clipTrianglesRender(vertices, triangles, trianglesLength, uvs, light, dark, twoColor) {
         let clipOutput = this.clipOutput, clippedVertices = this.clippedVertices;
         let clippedTriangles = this.clippedTriangles;
         let polygons = this.clippingPolygons;
@@ -9865,7 +10948,7 @@ class SkeletonClipping {
         let index = 0;
         clippedVertices.length = 0;
         clippedTriangles.length = 0;
-        outer: for (let i = 0; i < trianglesLength; i += 3) {
+        for (let i = 0; i < trianglesLength; i += 3) {
             let vertexOffset = triangles[i] << 1;
             let x1 = vertices[vertexOffset], y1 = vertices[vertexOffset + 1];
             let u1 = uvs[vertexOffset], v1 = uvs[vertexOffset + 1];
@@ -9886,7 +10969,7 @@ class SkeletonClipping {
                     let clipOutputCount = clipOutputLength >> 1;
                     let clipOutputItems = this.clipOutput;
                     let clippedVerticesItems = Utils.setArraySize(clippedVertices, s + clipOutputCount * vertexSize);
-                    for (let ii = 0; ii < clipOutputLength; ii += 2) {
+                    for (let ii = 0; ii < clipOutputLength; ii += 2, s += vertexSize) {
                         let x = clipOutputItems[ii], y = clipOutputItems[ii + 1];
                         clippedVerticesItems[s] = x;
                         clippedVerticesItems[s + 1] = y;
@@ -9906,16 +10989,14 @@ class SkeletonClipping {
                             clippedVerticesItems[s + 10] = dark.b;
                             clippedVerticesItems[s + 11] = dark.a;
                         }
-                        s += vertexSize;
                     }
                     s = clippedTriangles.length;
                     let clippedTrianglesItems = Utils.setArraySize(clippedTriangles, s + 3 * (clipOutputCount - 2));
                     clipOutputCount--;
-                    for (let ii = 1; ii < clipOutputCount; ii++) {
+                    for (let ii = 1; ii < clipOutputCount; ii++, s += 3) {
                         clippedTrianglesItems[s] = index;
                         clippedTrianglesItems[s + 1] = (index + ii);
                         clippedTrianglesItems[s + 2] = (index + ii + 1);
-                        s += 3;
                     }
                     index += clipOutputCount + 1;
                 }
@@ -9985,7 +11066,85 @@ class SkeletonClipping {
                     clippedTrianglesItems[s + 1] = (index + 1);
                     clippedTrianglesItems[s + 2] = (index + 2);
                     index += 3;
-                    continue outer;
+                    break;
+                }
+            }
+        }
+    }
+    clipTrianglesUnpacked(vertices, triangles, trianglesLength, uvs) {
+        let clipOutput = this.clipOutput, clippedVertices = this.clippedVertices, clippedUVs = this.clippedUVs;
+        let clippedTriangles = this.clippedTriangles;
+        let polygons = this.clippingPolygons;
+        let polygonsCount = polygons.length;
+        let index = 0;
+        clippedVertices.length = 0;
+        clippedUVs.length = 0;
+        clippedTriangles.length = 0;
+        for (let i = 0; i < trianglesLength; i += 3) {
+            let vertexOffset = triangles[i] << 1;
+            let x1 = vertices[vertexOffset], y1 = vertices[vertexOffset + 1];
+            let u1 = uvs[vertexOffset], v1 = uvs[vertexOffset + 1];
+            vertexOffset = triangles[i + 1] << 1;
+            let x2 = vertices[vertexOffset], y2 = vertices[vertexOffset + 1];
+            let u2 = uvs[vertexOffset], v2 = uvs[vertexOffset + 1];
+            vertexOffset = triangles[i + 2] << 1;
+            let x3 = vertices[vertexOffset], y3 = vertices[vertexOffset + 1];
+            let u3 = uvs[vertexOffset], v3 = uvs[vertexOffset + 1];
+            for (let p = 0; p < polygonsCount; p++) {
+                let s = clippedVertices.length;
+                if (this.clip(x1, y1, x2, y2, x3, y3, polygons[p], clipOutput)) {
+                    let clipOutputLength = clipOutput.length;
+                    if (clipOutputLength == 0)
+                        continue;
+                    let d0 = y2 - y3, d1 = x3 - x2, d2 = x1 - x3, d4 = y3 - y1;
+                    let d = 1 / (d0 * d2 + d1 * (y1 - y3));
+                    let clipOutputCount = clipOutputLength >> 1;
+                    let clipOutputItems = this.clipOutput;
+                    let clippedVerticesItems = Utils.setArraySize(clippedVertices, s + clipOutputCount * 2);
+                    let clippedUVsItems = Utils.setArraySize(clippedUVs, s + clipOutputCount * 2);
+                    for (let ii = 0; ii < clipOutputLength; ii += 2, s += 2) {
+                        let x = clipOutputItems[ii], y = clipOutputItems[ii + 1];
+                        clippedVerticesItems[s] = x;
+                        clippedVerticesItems[s + 1] = y;
+                        let c0 = x - x3, c1 = y - y3;
+                        let a = (d0 * c0 + d1 * c1) * d;
+                        let b = (d4 * c0 + d2 * c1) * d;
+                        let c = 1 - a - b;
+                        clippedUVsItems[s] = u1 * a + u2 * b + u3 * c;
+                        clippedUVsItems[s + 1] = v1 * a + v2 * b + v3 * c;
+                    }
+                    s = clippedTriangles.length;
+                    let clippedTrianglesItems = Utils.setArraySize(clippedTriangles, s + 3 * (clipOutputCount - 2));
+                    clipOutputCount--;
+                    for (let ii = 1; ii < clipOutputCount; ii++, s += 3) {
+                        clippedTrianglesItems[s] = index;
+                        clippedTrianglesItems[s + 1] = (index + ii);
+                        clippedTrianglesItems[s + 2] = (index + ii + 1);
+                    }
+                    index += clipOutputCount + 1;
+                }
+                else {
+                    let clippedVerticesItems = Utils.setArraySize(clippedVertices, s + 3 * 2);
+                    clippedVerticesItems[s] = x1;
+                    clippedVerticesItems[s + 1] = y1;
+                    clippedVerticesItems[s + 2] = x2;
+                    clippedVerticesItems[s + 3] = y2;
+                    clippedVerticesItems[s + 4] = x3;
+                    clippedVerticesItems[s + 5] = y3;
+                    let clippedUVSItems = Utils.setArraySize(clippedUVs, s + 3 * 2);
+                    clippedUVSItems[s] = u1;
+                    clippedUVSItems[s + 1] = v1;
+                    clippedUVSItems[s + 2] = u2;
+                    clippedUVSItems[s + 3] = v2;
+                    clippedUVSItems[s + 4] = u3;
+                    clippedUVSItems[s + 5] = v3;
+                    s = clippedTriangles.length;
+                    let clippedTrianglesItems = Utils.setArraySize(clippedTriangles, s + 3);
+                    clippedTrianglesItems[s] = index;
+                    clippedTrianglesItems[s + 1] = (index + 1);
+                    clippedTrianglesItems[s + 2] = (index + 2);
+                    index += 3;
+                    break;
                 }
             }
         }
@@ -10013,51 +11172,50 @@ class SkeletonClipping {
         input.push(x1);
         input.push(y1);
         output.length = 0;
-        let clippingVertices = clippingArea;
         let clippingVerticesLast = clippingArea.length - 4;
+        let clippingVertices = clippingArea;
         for (let i = 0;; i += 2) {
             let edgeX = clippingVertices[i], edgeY = clippingVertices[i + 1];
-            let edgeX2 = clippingVertices[i + 2], edgeY2 = clippingVertices[i + 3];
-            let deltaX = edgeX - edgeX2, deltaY = edgeY - edgeY2;
+            let ex = edgeX - clippingVertices[i + 2], ey = edgeY - clippingVertices[i + 3];
+            let outputStart = output.length;
             let inputVertices = input;
-            let inputVerticesLength = input.length - 2, outputStart = output.length;
-            for (let ii = 0; ii < inputVerticesLength; ii += 2) {
+            for (let ii = 0, nn = input.length - 2; ii < nn;) {
                 let inputX = inputVertices[ii], inputY = inputVertices[ii + 1];
-                let inputX2 = inputVertices[ii + 2], inputY2 = inputVertices[ii + 3];
-                let side2 = deltaX * (inputY2 - edgeY2) - deltaY * (inputX2 - edgeX2) > 0;
-                if (deltaX * (inputY - edgeY2) - deltaY * (inputX - edgeX2) > 0) {
-                    if (side2) { // v1 inside, v2 inside
+                ii += 2;
+                let inputX2 = inputVertices[ii], inputY2 = inputVertices[ii + 1];
+                let s2 = ey * (edgeX - inputX2) > ex * (edgeY - inputY2);
+                let s1 = ey * (edgeX - inputX) - ex * (edgeY - inputY);
+                if (s1 > 0) {
+                    if (s2) { // v1 inside, v2 inside
                         output.push(inputX2);
                         output.push(inputY2);
                         continue;
                     }
                     // v1 inside, v2 outside
-                    let c0 = inputY2 - inputY, c2 = inputX2 - inputX;
-                    let s = c0 * (edgeX2 - edgeX) - c2 * (edgeY2 - edgeY);
-                    if (Math.abs(s) > 0.000001) {
-                        let ua = (c2 * (edgeY - inputY) - c0 * (edgeX - inputX)) / s;
-                        output.push(edgeX + (edgeX2 - edgeX) * ua);
-                        output.push(edgeY + (edgeY2 - edgeY) * ua);
+                    let ix = inputX2 - inputX, iy = inputY2 - inputY, t = s1 / (ix * ey - iy * ex);
+                    if (t >= 0 && t <= 1) {
+                        output.push(inputX + ix * t);
+                        output.push(inputY + iy * t);
                     }
                     else {
-                        output.push(edgeX);
-                        output.push(edgeY);
+                        output.push(inputX2);
+                        output.push(inputY2);
+                        continue;
                     }
                 }
-                else if (side2) { // v1 outside, v2 inside
-                    let c0 = inputY2 - inputY, c2 = inputX2 - inputX;
-                    let s = c0 * (edgeX2 - edgeX) - c2 * (edgeY2 - edgeY);
-                    if (Math.abs(s) > 0.000001) {
-                        let ua = (c2 * (edgeY - inputY) - c0 * (edgeX - inputX)) / s;
-                        output.push(edgeX + (edgeX2 - edgeX) * ua);
-                        output.push(edgeY + (edgeY2 - edgeY) * ua);
+                else if (s2) { // v1 outside, v2 inside
+                    let ix = inputX2 - inputX, iy = inputY2 - inputY, t = s1 / (ix * ey - iy * ex);
+                    if (t >= 0 && t <= 1) {
+                        output.push(inputX + ix * t);
+                        output.push(inputY + iy * t);
+                        output.push(inputX2);
+                        output.push(inputY2);
                     }
                     else {
-                        output.push(edgeX);
-                        output.push(edgeY);
+                        output.push(inputX2);
+                        output.push(inputY2);
+                        continue;
                     }
-                    output.push(inputX2);
-                    output.push(inputY2);
                 }
                 clipped = true;
             }
@@ -10109,17 +11267,17 @@ class SkeletonClipping {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -10132,8 +11290,8 @@ class SkeletonClipping {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Loads skeleton data in the Spine JSON format.
  *
@@ -10141,13 +11299,14 @@ class SkeletonClipping {
  * [JSON and binary data](http://esotericsoftware.com/spine-loading-skeleton-data#JSON-and-binary-data) in the Spine
  * Runtimes Guide. */
 class SkeletonJson {
+    attachmentLoader;
+    /** Scales bone positions, image sizes, and translations as they are loaded. This allows different size images to be used at
+     * runtime than were used in Spine.
+     *
+     * See [Scaling](http://esotericsoftware.com/spine-loading-skeleton-data#Scaling) in the Spine Runtimes Guide. */
+    scale = 1;
+    linkedMeshes = new Array();
     constructor(attachmentLoader) {
-        /** Scales bone positions, image sizes, and translations as they are loaded. This allows different size images to be used at
-         * runtime than were used in Spine.
-         *
-         * See [Scaling](http://esotericsoftware.com/spine-loading-skeleton-data#Scaling) in the Spine Runtimes Guide. */
-        this.scale = 1;
-        this.linkedMeshes = new Array();
         this.attachmentLoader = attachmentLoader;
     }
     readSkeletonData(json) {
@@ -10163,8 +11322,10 @@ class SkeletonJson {
             skeletonData.y = skeletonMap.y;
             skeletonData.width = skeletonMap.width;
             skeletonData.height = skeletonMap.height;
+            skeletonData.referenceScale = getValue(skeletonMap, "referenceScale", 100) * scale;
             skeletonData.fps = skeletonMap.fps;
-            skeletonData.imagesPath = skeletonMap.images;
+            skeletonData.imagesPath = skeletonMap.images ?? null;
+            skeletonData.audioPath = skeletonMap.audio ?? null;
         }
         // Bones
         if (root.bones) {
@@ -10183,7 +11344,7 @@ class SkeletonJson {
                 data.scaleY = getValue(boneMap, "scaleY", 1);
                 data.shearX = getValue(boneMap, "shearX", 0);
                 data.shearY = getValue(boneMap, "shearY", 0);
-                data.transformMode = Utils.enumValue(TransformMode, getValue(boneMap, "transform", "Normal"));
+                data.inherit = Utils.enumValue(Inherit, getValue(boneMap, "inherit", "Normal"));
                 data.skinRequired = getValue(boneMap, "skin", false);
                 let color = getValue(boneMap, "color", null);
                 if (color)
@@ -10195,10 +11356,11 @@ class SkeletonJson {
         if (root.slots) {
             for (let i = 0; i < root.slots.length; i++) {
                 let slotMap = root.slots[i];
+                let slotName = slotMap.name;
                 let boneData = skeletonData.findBone(slotMap.bone);
                 if (!boneData)
-                    throw new Error(`Couldn't find bone ${slotMap.bone} for slot ${slotMap.name}`);
-                let data = new SlotData(skeletonData.slots.length, slotMap.name, boneData);
+                    throw new Error(`Couldn't find bone ${slotMap.bone} for slot ${slotName}`);
+                let data = new SlotData(skeletonData.slots.length, slotName, boneData);
                 let color = getValue(slotMap, "color", null);
                 if (color)
                     data.color.setFromString(color);
@@ -10207,6 +11369,7 @@ class SkeletonJson {
                     data.darkColor = Color.fromString(dark);
                 data.attachmentName = getValue(slotMap, "attachment", null);
                 data.blendMode = Utils.enumValue(BlendMode, getValue(slotMap, "blend", "normal"));
+                data.visible = getValue(slotMap, "visible", true);
                 skeletonData.slots.push(data);
             }
         }
@@ -10308,6 +11471,42 @@ class SkeletonJson {
                 skeletonData.pathConstraints.push(data);
             }
         }
+        // Physics constraints.
+        if (root.physics) {
+            for (let i = 0; i < root.physics.length; i++) {
+                const constraintMap = root.physics[i];
+                const data = new PhysicsConstraintData(constraintMap.name);
+                data.order = getValue(constraintMap, "order", 0);
+                data.skinRequired = getValue(constraintMap, "skin", false);
+                const boneName = constraintMap.bone;
+                const bone = skeletonData.findBone(boneName);
+                if (bone == null)
+                    throw new Error("Physics bone not found: " + boneName);
+                data.bone = bone;
+                data.x = getValue(constraintMap, "x", 0);
+                data.y = getValue(constraintMap, "y", 0);
+                data.rotate = getValue(constraintMap, "rotate", 0);
+                data.scaleX = getValue(constraintMap, "scaleX", 0);
+                data.shearX = getValue(constraintMap, "shearX", 0);
+                data.limit = getValue(constraintMap, "limit", 5000) * scale;
+                data.step = 1 / getValue(constraintMap, "fps", 60);
+                data.inertia = getValue(constraintMap, "inertia", 1);
+                data.strength = getValue(constraintMap, "strength", 100);
+                data.damping = getValue(constraintMap, "damping", 1);
+                data.massInverse = 1 / getValue(constraintMap, "mass", 1);
+                data.wind = getValue(constraintMap, "wind", 0);
+                data.gravity = getValue(constraintMap, "gravity", 0);
+                data.mix = getValue(constraintMap, "mix", 1);
+                data.inertiaGlobal = getValue(constraintMap, "inertiaGlobal", false);
+                data.strengthGlobal = getValue(constraintMap, "strengthGlobal", false);
+                data.dampingGlobal = getValue(constraintMap, "dampingGlobal", false);
+                data.massGlobal = getValue(constraintMap, "massGlobal", false);
+                data.windGlobal = getValue(constraintMap, "windGlobal", false);
+                data.gravityGlobal = getValue(constraintMap, "gravityGlobal", false);
+                data.mixGlobal = getValue(constraintMap, "mixGlobal", false);
+                skeletonData.physicsConstraints.push(data);
+            }
+        }
         // Skins.
         if (root.skins) {
             for (let i = 0; i < root.skins.length; i++) {
@@ -10346,6 +11545,15 @@ class SkeletonJson {
                         let constraint = skeletonData.findPathConstraint(constraintName);
                         if (!constraint)
                             throw new Error(`Couldn't find path constraint ${constraintName} for skin ${skinMap.name}.`);
+                        skin.constraints.push(constraint);
+                    }
+                }
+                if (skinMap.physics) {
+                    for (let ii = 0; ii < skinMap.physics.length; ii++) {
+                        let constraintName = skinMap.physics[ii];
+                        let constraint = skeletonData.findPhysicsConstraint(constraintName);
+                        if (!constraint)
+                            throw new Error(`Couldn't find physics constraint ${constraintName} for skin ${skinMap.name}.`);
                         skin.constraints.push(constraint);
                     }
                 }
@@ -10753,6 +11961,14 @@ class SkeletonJson {
                         let timeline = new ShearYTimeline(frames, frames, boneIndex);
                         timelines.push(readTimeline1(timelineMap, timeline, 0, 1));
                     }
+                    else if (timelineName === "inherit") {
+                        let timeline = new InheritTimeline(frames, bone.index);
+                        for (let frame = 0; frame < timelineMap.length; frame++) {
+                            let aFrame = timelineMap[frame];
+                            timeline.setFrame(frame, getValue(aFrame, "time", 0), Utils.enumValue(Inherit, getValue(aFrame, "inherit", "Normal")));
+                        }
+                        timelines.push(timeline);
+                    }
                 }
             }
         }
@@ -10904,6 +12120,51 @@ class SkeletonJson {
                 }
             }
         }
+        // Physics constraint timelines.
+        if (map.physics) {
+            for (let constraintName in map.physics) {
+                let constraintMap = map.physics[constraintName];
+                let constraintIndex = -1;
+                if (constraintName.length > 0) {
+                    let constraint = skeletonData.findPhysicsConstraint(constraintName);
+                    if (!constraint)
+                        throw new Error("Physics constraint not found: " + constraintName);
+                    constraintIndex = skeletonData.physicsConstraints.indexOf(constraint);
+                }
+                for (let timelineName in constraintMap) {
+                    let timelineMap = constraintMap[timelineName];
+                    let keyMap = timelineMap[0];
+                    if (!keyMap)
+                        continue;
+                    let frames = timelineMap.length;
+                    if (timelineName == "reset") {
+                        const timeline = new PhysicsConstraintResetTimeline(frames, constraintIndex);
+                        for (let frame = 0; keyMap != null; keyMap = timelineMap[frame + 1], frame++)
+                            timeline.setFrame(frame, getValue(keyMap, "time", 0));
+                        timelines.push(timeline);
+                        continue;
+                    }
+                    let timeline;
+                    if (timelineName == "inertia")
+                        timeline = new PhysicsConstraintInertiaTimeline(frames, frames, constraintIndex);
+                    else if (timelineName == "strength")
+                        timeline = new PhysicsConstraintStrengthTimeline(frames, frames, constraintIndex);
+                    else if (timelineName == "damping")
+                        timeline = new PhysicsConstraintDampingTimeline(frames, frames, constraintIndex);
+                    else if (timelineName == "mass")
+                        timeline = new PhysicsConstraintMassTimeline(frames, frames, constraintIndex);
+                    else if (timelineName == "wind")
+                        timeline = new PhysicsConstraintWindTimeline(frames, frames, constraintIndex);
+                    else if (timelineName == "gravity")
+                        timeline = new PhysicsConstraintGravityTimeline(frames, frames, constraintIndex);
+                    else if (timelineName == "mix") //
+                        timeline = new PhysicsConstraintMixTimeline(frames, frames, constraintIndex);
+                    else
+                        continue;
+                    timelines.push(readTimeline1(timelineMap, timeline, 0, 1));
+                }
+            }
+        }
         // Attachment timelines.
         if (map.attachments) {
             for (let attachmentsName in map.attachments) {
@@ -11048,6 +12309,11 @@ class SkeletonJson {
     }
 }
 class LinkedMesh {
+    parent;
+    skin;
+    slotIndex;
+    mesh;
+    inheritTimeline;
     constructor(mesh, skin, slotIndex, parent, inheritDeform) {
         this.mesh = mesh;
         this.skin = skin;
@@ -11123,17 +12389,17 @@ function getValue(map, property, defaultValue) {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11146,23 +12412,23 @@ function getValue(map, property, defaultValue) {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11175,8 +12441,8 @@ function getValue(map, property, defaultValue) {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 (() => {
     if (typeof Math.fround === "undefined") {
@@ -11190,17 +12456,17 @@ function getValue(map, property, defaultValue) {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11213,23 +12479,23 @@ function getValue(map, property, defaultValue) {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11242,30 +12508,37 @@ function getValue(map, property, defaultValue) {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class ManagedWebGLRenderingContext {
+    canvas;
+    gl;
+    restorables = new Array();
     constructor(canvasOrContext, contextConfig = { alpha: "true" }) {
-        this.restorables = new Array();
         if (!((canvasOrContext instanceof WebGLRenderingContext) || (typeof WebGL2RenderingContext !== 'undefined' && canvasOrContext instanceof WebGL2RenderingContext))) {
             let canvas = canvasOrContext;
             this.gl = (canvas.getContext("webgl2", contextConfig) || canvas.getContext("webgl", contextConfig));
             this.canvas = canvas;
-            canvas.addEventListener("webglcontextlost", (e) => {
-                let event = e;
-                if (e)
-                    e.preventDefault();
-            });
-            canvas.addEventListener("webglcontextrestored", (e) => {
-                for (let i = 0, n = this.restorables.length; i < n; i++)
-                    this.restorables[i].restore();
-            });
+            canvas.addEventListener("webglcontextlost", this.contextLostHandler);
+            canvas.addEventListener("webglcontextrestored", this.contextRestoredHandler);
         }
         else {
             this.gl = canvasOrContext;
             this.canvas = this.gl.canvas;
         }
+    }
+    contextLostHandler(e) {
+        if (e)
+            e.preventDefault();
+    }
+    contextRestoredHandler(e) {
+        for (let i = 0, n = this.restorables.length; i < n; i++)
+            this.restorables[i].restore();
+    }
+    dispose() {
+        this.canvas.removeEventListener("webglcontextlost", this.contextLostHandler);
+        this.canvas.removeEventListener("webglcontextrestored", this.contextRestoredHandler);
     }
     addRestorable(restorable) {
         this.restorables.push(restorable);
@@ -11279,17 +12552,17 @@ class ManagedWebGLRenderingContext {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11302,15 +12575,17 @@ class ManagedWebGLRenderingContext {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class GLTexture extends Texture {
+    context;
+    texture = null;
+    boundUnit = 0;
+    useMipMaps = false;
+    static DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = false;
     constructor(context, image, useMipMaps = false) {
         super(image);
-        this.texture = null;
-        this.boundUnit = 0;
-        this.useMipMaps = false;
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
         this.useMipMaps = useMipMaps;
         this.restore();
@@ -11389,21 +12664,20 @@ class GLTexture extends Texture {
         gl.deleteTexture(this.texture);
     }
 }
-GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = false;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11416,8 +12690,8 @@ GLTexture.DISABLE_UNPACK_PREMULTIPLIED_ALPHA_WEBGL = false;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 let AssetManager$2 = class AssetManager extends AssetManagerBase {
     constructor(context, pathPrefix = "", downloader = new Downloader()) {
@@ -11429,17 +12703,17 @@ let AssetManager$2 = class AssetManager extends AssetManagerBase {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11452,14 +12726,14 @@ let AssetManager$2 = class AssetManager extends AssetManagerBase {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Vector3 {
+    x = 0;
+    y = 0;
+    z = 0;
     constructor(x = 0, y = 0, z = 0) {
-        this.x = 0;
-        this.y = 0;
-        this.z = 0;
         this.x = x;
         this.y = y;
         this.z = z;
@@ -11532,17 +12806,17 @@ class Vector3 {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11555,8 +12829,8 @@ class Vector3 {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 const M00 = 0;
 const M01 = 4;
@@ -11575,9 +12849,13 @@ const M31 = 7;
 const M32 = 11;
 const M33 = 15;
 class Matrix4 {
+    temp = new Float32Array(16);
+    values = new Float32Array(16);
+    static xAxis = new Vector3();
+    static yAxis = new Vector3();
+    static zAxis = new Vector3();
+    static tmpMatrix = new Matrix4();
     constructor() {
-        this.temp = new Float32Array(16);
-        this.values = new Float32Array(16);
         let v = this.values;
         v[M00] = 1;
         v[M11] = 1;
@@ -11837,24 +13115,20 @@ class Matrix4 {
         return this;
     }
 }
-Matrix4.xAxis = new Vector3();
-Matrix4.yAxis = new Vector3();
-Matrix4.zAxis = new Vector3();
-Matrix4.tmpMatrix = new Matrix4();
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11867,23 +13141,23 @@ Matrix4.tmpMatrix = new Matrix4();
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class OrthoCamera {
+    position = new Vector3(0, 0, 0);
+    direction = new Vector3(0, 0, -1);
+    up = new Vector3(0, 1, 0);
+    near = 0;
+    far = 100;
+    zoom = 1;
+    viewportWidth = 0;
+    viewportHeight = 0;
+    projectionView = new Matrix4();
+    inverseProjectionView = new Matrix4();
+    projection = new Matrix4();
+    view = new Matrix4();
     constructor(viewportWidth, viewportHeight) {
-        this.position = new Vector3(0, 0, 0);
-        this.direction = new Vector3(0, 0, -1);
-        this.up = new Vector3(0, 1, 0);
-        this.near = 0;
-        this.far = 100;
-        this.zoom = 1;
-        this.viewportWidth = 0;
-        this.viewportHeight = 0;
-        this.projectionView = new Matrix4();
-        this.inverseProjectionView = new Matrix4();
-        this.projection = new Matrix4();
-        this.view = new Matrix4();
         this.viewportWidth = viewportWidth;
         this.viewportHeight = viewportHeight;
         this.update();
@@ -11923,17 +13197,17 @@ class OrthoCamera {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -11946,82 +13220,80 @@ class OrthoCamera {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Input {
-    constructor(element) {
-        this.mouseX = 0;
-        this.mouseY = 0;
-        this.buttonDown = false;
-        this.touch0 = null;
-        this.touch1 = null;
-        this.initialPinchDistance = 0;
-        this.listeners = new Array();
-        this.eventListeners = [];
+    element;
+    mouseX = 0;
+    mouseY = 0;
+    buttonDown = false;
+    touch0 = null;
+    touch1 = null;
+    initialPinchDistance = 0;
+    listeners = new Array();
+    autoPreventDefault;
+    // this is needed because browsers sends mousedown-mousemove-mousesup after a touch sequence, unless touch end preventDefault
+    // but preventing default will result in preventing interaction with the page.
+    isTouch = false;
+    callbacks;
+    constructor(element, autoPreventDefault = true) {
         this.element = element;
-        this.setupCallbacks(element);
+        this.autoPreventDefault = autoPreventDefault;
+        this.callbacks = this.setupCallbacks(element);
     }
     setupCallbacks(element) {
-        let mouseDown = (ev) => {
-            if (ev instanceof MouseEvent) {
+        const mouseDown = (ev) => {
+            if (ev instanceof MouseEvent && !this.isTouch) {
                 let rect = element.getBoundingClientRect();
                 this.mouseX = ev.clientX - rect.left;
-                ;
                 this.mouseY = ev.clientY - rect.top;
                 this.buttonDown = true;
                 this.listeners.map((listener) => { if (listener.down)
-                    listener.down(this.mouseX, this.mouseY); });
-                document.addEventListener("mousemove", mouseMove);
-                document.addEventListener("mouseup", mouseUp);
+                    listener.down(this.mouseX, this.mouseY, ev); });
             }
         };
-        let mouseMove = (ev) => {
-            if (ev instanceof MouseEvent) {
+        const mouseMove = (ev) => {
+            if (ev instanceof MouseEvent && !this.isTouch) {
                 let rect = element.getBoundingClientRect();
                 this.mouseX = ev.clientX - rect.left;
-                ;
                 this.mouseY = ev.clientY - rect.top;
                 this.listeners.map((listener) => {
                     if (this.buttonDown) {
                         if (listener.dragged)
-                            listener.dragged(this.mouseX, this.mouseY);
+                            listener.dragged(this.mouseX, this.mouseY, ev);
                     }
                     else {
                         if (listener.moved)
-                            listener.moved(this.mouseX, this.mouseY);
+                            listener.moved(this.mouseX, this.mouseY, ev);
                     }
                 });
             }
         };
-        let mouseUp = (ev) => {
-            if (ev instanceof MouseEvent) {
+        const mouseUp = (ev) => {
+            if (ev instanceof MouseEvent && !this.isTouch) {
                 let rect = element.getBoundingClientRect();
                 this.mouseX = ev.clientX - rect.left;
                 ;
                 this.mouseY = ev.clientY - rect.top;
                 this.buttonDown = false;
                 this.listeners.map((listener) => { if (listener.up)
-                    listener.up(this.mouseX, this.mouseY); });
-                document.removeEventListener("mousemove", mouseMove);
-                document.removeEventListener("mouseup", mouseUp);
+                    listener.up(this.mouseX, this.mouseY, ev); });
             }
         };
-        let mouseWheel = (e) => {
-            e.preventDefault();
-            let deltaY = e.deltaY;
-            if (e.deltaMode == WheelEvent.DOM_DELTA_LINE)
+        const mouseWheel = (ev) => {
+            if (this.autoPreventDefault)
+                ev.preventDefault();
+            let deltaY = ev.deltaY;
+            if (ev.deltaMode == WheelEvent.DOM_DELTA_LINE)
                 deltaY *= 8;
-            if (e.deltaMode == WheelEvent.DOM_DELTA_PAGE)
+            if (ev.deltaMode == WheelEvent.DOM_DELTA_PAGE)
                 deltaY *= 24;
             this.listeners.map((listener) => { if (listener.wheel)
-                listener.wheel(e.deltaY); });
+                listener.wheel(ev.deltaY, ev); });
         };
-        element.addEventListener("mousedown", mouseDown, true);
-        element.addEventListener("mousemove", mouseMove, true);
-        element.addEventListener("mouseup", mouseUp, true);
-        element.addEventListener("wheel", mouseWheel, true);
-        element.addEventListener("touchstart", (ev) => {
+        const touchStart = (ev) => {
+            this.isTouch = true;
             if (!this.touch0 || !this.touch1) {
                 var touches = ev.changedTouches;
                 let nativeTouch = touches.item(0);
@@ -12037,7 +13309,7 @@ class Input {
                 if (!this.touch0) {
                     this.touch0 = touch;
                     this.listeners.map((listener) => { if (listener.down)
-                        listener.down(touch.x, touch.y); });
+                        listener.down(touch.x, touch.y, ev); });
                 }
                 else if (!this.touch1) {
                     this.touch1 = touch;
@@ -12045,12 +13317,14 @@ class Input {
                     let dy = this.touch1.x - this.touch0.x;
                     this.initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
                     this.listeners.map((listener) => { if (listener.zoom)
-                        listener.zoom(this.initialPinchDistance, this.initialPinchDistance); });
+                        listener.zoom(this.initialPinchDistance, this.initialPinchDistance, ev); });
                 }
             }
-            ev.preventDefault();
-        }, false);
-        element.addEventListener("touchmove", (ev) => {
+            if (this.autoPreventDefault)
+                ev.preventDefault();
+        };
+        const touchMove = (ev) => {
+            this.isTouch = true;
             if (this.touch0) {
                 var touches = ev.changedTouches;
                 let rect = element.getBoundingClientRect();
@@ -12062,7 +13336,7 @@ class Input {
                         this.touch0.x = this.mouseX = x;
                         this.touch0.y = this.mouseY = y;
                         this.listeners.map((listener) => { if (listener.dragged)
-                            listener.dragged(x, y); });
+                            listener.dragged(x, y, ev); });
                     }
                     if (this.touch1 && this.touch1.identifier === nativeTouch.identifier) {
                         this.touch1.x = this.mouseX = x;
@@ -12074,12 +13348,14 @@ class Input {
                     let dy = this.touch1.x - this.touch0.x;
                     let distance = Math.sqrt(dx * dx + dy * dy);
                     this.listeners.map((listener) => { if (listener.zoom)
-                        listener.zoom(this.initialPinchDistance, distance); });
+                        listener.zoom(this.initialPinchDistance, distance, ev); });
                 }
             }
-            ev.preventDefault();
-        }, false);
-        let touchEnd = (ev) => {
+            if (this.autoPreventDefault)
+                ev.preventDefault();
+        };
+        const touchEnd = (ev) => {
+            this.isTouch = true;
             if (this.touch0) {
                 var touches = ev.changedTouches;
                 let rect = element.getBoundingClientRect();
@@ -12092,7 +13368,7 @@ class Input {
                         this.mouseX = x;
                         this.mouseY = y;
                         this.listeners.map((listener) => { if (listener.up)
-                            listener.up(x, y); });
+                            listener.up(x, y, ev); });
                         if (!this.touch1) {
                             this.buttonDown = false;
                             break;
@@ -12104,7 +13380,7 @@ class Input {
                             this.mouseX = this.touch0.x;
                             this.buttonDown = true;
                             this.listeners.map((listener) => { if (listener.down)
-                                listener.down(this.touch0.x, this.touch0.y); });
+                                listener.down(this.touch0.x, this.touch0.y, ev); });
                         }
                     }
                     if (this.touch1 && this.touch1.identifier) {
@@ -12112,10 +13388,38 @@ class Input {
                     }
                 }
             }
-            ev.preventDefault();
+            if (this.autoPreventDefault)
+                ev.preventDefault();
         };
-        element.addEventListener("touchend", touchEnd, false);
+        element.addEventListener("mousedown", mouseDown, true);
+        element.addEventListener("mousemove", mouseMove, true);
+        element.addEventListener("mouseup", mouseUp, true);
+        element.addEventListener("wheel", mouseWheel, true);
+        element.addEventListener("touchstart", touchStart, { passive: false, capture: false });
+        element.addEventListener("touchmove", touchMove, { passive: false, capture: false });
+        element.addEventListener("touchend", touchEnd, { passive: false, capture: false });
         element.addEventListener("touchcancel", touchEnd);
+        return {
+            mouseDown,
+            mouseMove,
+            mouseUp,
+            mouseWheel,
+            touchStart,
+            touchMove,
+            touchEnd,
+        };
+    }
+    dispose() {
+        const element = this.element;
+        element.removeEventListener("mousedown", this.callbacks.mouseDown, true);
+        element.removeEventListener("mousemove", this.callbacks.mouseMove, true);
+        element.removeEventListener("mouseup", this.callbacks.mouseUp, true);
+        element.removeEventListener("wheel", this.callbacks.mouseWheel, true);
+        element.removeEventListener("touchstart", this.callbacks.touchStart, { capture: false });
+        element.removeEventListener("touchmove", this.callbacks.touchMove, { capture: false });
+        element.removeEventListener("touchend", this.callbacks.touchEnd, { capture: false });
+        element.removeEventListener("touchcancel", this.callbacks.touchEnd);
+        this.listeners.length = 0;
     }
     addListener(listener) {
         this.listeners.push(listener);
@@ -12128,6 +13432,9 @@ class Input {
     }
 }
 class Touch {
+    identifier;
+    x;
+    y;
     constructor(identifier, x, y) {
         this.identifier = identifier;
         this.x = x;
@@ -12137,17 +13444,17 @@ class Touch {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -12160,10 +13467,12 @@ class Touch {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class CameraController {
+    canvas;
+    camera;
     constructor(canvas, camera) {
         this.canvas = canvas;
         this.camera = camera;
@@ -12231,17 +13540,17 @@ class CameraController {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -12254,10 +13563,27 @@ class CameraController {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Shader {
+    vertexShader;
+    fragmentShader;
+    static MVP_MATRIX = "u_projTrans";
+    static POSITION = "a_position";
+    static COLOR = "a_color";
+    static COLOR2 = "a_color2";
+    static TEXCOORDS = "a_texCoords";
+    static SAMPLER = "u_texture";
+    context;
+    vs = null;
+    vsSource;
+    fs = null;
+    fsSource;
+    program = null;
+    tmp2x2 = new Float32Array(2 * 2);
+    tmp3x3 = new Float32Array(3 * 3);
+    tmp4x4 = new Float32Array(4 * 4);
     getProgram() { return this.program; }
     getVertexShader() { return this.vertexShader; }
     getFragmentShader() { return this.fragmentShader; }
@@ -12266,12 +13592,6 @@ class Shader {
     constructor(context, vertexShader, fragmentShader) {
         this.vertexShader = vertexShader;
         this.fragmentShader = fragmentShader;
-        this.vs = null;
-        this.fs = null;
-        this.program = null;
-        this.tmp2x2 = new Float32Array(2 * 2);
-        this.tmp3x3 = new Float32Array(3 * 3);
-        this.tmp4x4 = new Float32Array(4 * 4);
         this.vsSource = vertexShader;
         this.fsSource = fragmentShader;
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
@@ -12496,26 +13816,20 @@ void main () {
         return new Shader(context, vs, fs);
     }
 }
-Shader.MVP_MATRIX = "u_projTrans";
-Shader.POSITION = "a_position";
-Shader.COLOR = "a_color";
-Shader.COLOR2 = "a_color2";
-Shader.TEXCOORDS = "a_texCoords";
-Shader.SAMPLER = "u_texture";
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -12528,10 +13842,21 @@ Shader.SAMPLER = "u_texture";
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Mesh {
+    attributes;
+    context;
+    vertices;
+    verticesBuffer = null;
+    verticesLength = 0;
+    dirtyVertices = false;
+    indices;
+    indicesBuffer = null;
+    indicesLength = 0;
+    dirtyIndices = false;
+    elementsPerVertex = 0;
     getAttributes() { return this.attributes; }
     maxVertices() { return this.vertices.length / this.elementsPerVertex; }
     numVertices() { return this.verticesLength / this.elementsPerVertex; }
@@ -12558,13 +13883,6 @@ class Mesh {
     }
     constructor(context, attributes, maxVertices, maxIndices) {
         this.attributes = attributes;
-        this.verticesBuffer = null;
-        this.verticesLength = 0;
-        this.dirtyVertices = false;
-        this.indicesBuffer = null;
-        this.indicesLength = 0;
-        this.dirtyIndices = false;
-        this.elementsPerVertex = 0;
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
         this.elementsPerVertex = 0;
         for (let i = 0; i < attributes.length; i++) {
@@ -12661,6 +13979,9 @@ class Mesh {
     }
 }
 class VertexAttribute {
+    name;
+    type;
+    numElements;
     constructor(name, type, numElements) {
         this.name = name;
         this.type = type;
@@ -12699,17 +14020,17 @@ var VertexAttributeType;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -12722,8 +14043,8 @@ var VertexAttributeType;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 const GL_ONE = 1;
 const GL_ONE_MINUS_SRC_COLOR = 0x0301;
@@ -12732,14 +14053,21 @@ const GL_ONE_MINUS_SRC_ALPHA = 0x0303;
 const GL_ONE_MINUS_DST_ALPHA = 0x0305;
 const GL_DST_COLOR = 0x0306;
 class PolygonBatcher {
+    static disableCulling = false;
+    context;
+    drawCalls = 0;
+    static globalDrawCalls = 0;
+    isDrawing = false;
+    mesh;
+    shader = null;
+    lastTexture = null;
+    verticesLength = 0;
+    indicesLength = 0;
+    srcColorBlend;
+    srcAlphaBlend;
+    dstBlend;
+    cullWasEnabled = false;
     constructor(context, twoColorTint = true, maxVertices = 10920) {
-        this.drawCalls = 0;
-        this.isDrawing = false;
-        this.shader = null;
-        this.lastTexture = null;
-        this.verticesLength = 0;
-        this.indicesLength = 0;
-        this.cullWasEnabled = false;
         if (maxVertices > 10920)
             throw new Error("Can't have more than 10920 triangles per batch: " + maxVertices);
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
@@ -12768,6 +14096,12 @@ class PolygonBatcher {
                 gl.disable(gl.CULL_FACE);
         }
     }
+    static blendModesGL = [
+        { srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
+        { srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE, srcAlpha: GL_ONE },
+        { srcRgb: GL_DST_COLOR, srcRgbPma: GL_DST_COLOR, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
+        { srcRgb: GL_ONE, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_COLOR, srcAlpha: GL_ONE }
+    ];
     setBlendMode(blendMode, premultipliedAlpha) {
         const blendModeGL = PolygonBatcher.blendModesGL[blendMode];
         const srcColorBlend = premultipliedAlpha ? blendModeGL.srcRgbPma : blendModeGL.srcRgb;
@@ -12846,28 +14180,20 @@ class PolygonBatcher {
         this.mesh.dispose();
     }
 }
-PolygonBatcher.disableCulling = false;
-PolygonBatcher.globalDrawCalls = 0;
-PolygonBatcher.blendModesGL = [
-    { srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
-    { srcRgb: GL_SRC_ALPHA, srcRgbPma: GL_ONE, dstRgb: GL_ONE, srcAlpha: GL_ONE },
-    { srcRgb: GL_DST_COLOR, srcRgbPma: GL_DST_COLOR, dstRgb: GL_ONE_MINUS_SRC_ALPHA, srcAlpha: GL_ONE },
-    { srcRgb: GL_ONE, srcRgbPma: GL_ONE, dstRgb: GL_ONE_MINUS_SRC_COLOR, srcAlpha: GL_ONE }
-];
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -12880,17 +14206,22 @@ PolygonBatcher.blendModesGL = [
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class ShapeRenderer {
+    context;
+    isDrawing = false;
+    mesh;
+    shapeType = ShapeType.Filled;
+    color = new Color(1, 1, 1, 1);
+    shader = null;
+    vertexIndex = 0;
+    tmp = new Vector2();
+    srcColorBlend;
+    srcAlphaBlend;
+    dstBlend;
     constructor(context, maxVertices = 10920) {
-        this.isDrawing = false;
-        this.shapeType = ShapeType.Filled;
-        this.color = new Color(1, 1, 1, 1);
-        this.shader = null;
-        this.vertexIndex = 0;
-        this.tmp = new Vector2();
         if (maxVertices > 10920)
             throw new Error("Can't have more than 10920 triangles per batch: " + maxVertices);
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
@@ -13196,17 +14527,17 @@ var ShapeType;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -13219,32 +14550,35 @@ var ShapeType;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class SkeletonDebugRenderer {
+    boneLineColor = new Color(1, 0, 0, 1);
+    boneOriginColor = new Color(0, 1, 0, 1);
+    attachmentLineColor = new Color(0, 0, 1, 0.5);
+    triangleLineColor = new Color(1, 0.64, 0, 0.5);
+    pathColor = new Color().setFromString("FF7F00");
+    clipColor = new Color(0.8, 0, 0, 2);
+    aabbColor = new Color(0, 1, 0, 0.5);
+    drawBones = true;
+    drawRegionAttachments = true;
+    drawBoundingBoxes = true;
+    drawMeshHull = true;
+    drawMeshTriangles = true;
+    drawPaths = true;
+    drawSkeletonXY = false;
+    drawClipping = true;
+    premultipliedAlpha = false;
+    scale = 1;
+    boneWidth = 2;
+    context;
+    bounds = new SkeletonBounds();
+    temp = new Array();
+    vertices = Utils.newFloatArray(2 * 1024);
+    static LIGHT_GRAY = new Color(192 / 255, 192 / 255, 192 / 255, 1);
+    static GREEN = new Color(0, 1, 0, 1);
     constructor(context) {
-        this.boneLineColor = new Color(1, 0, 0, 1);
-        this.boneOriginColor = new Color(0, 1, 0, 1);
-        this.attachmentLineColor = new Color(0, 0, 1, 0.5);
-        this.triangleLineColor = new Color(1, 0.64, 0, 0.5);
-        this.pathColor = new Color().setFromString("FF7F00");
-        this.clipColor = new Color(0.8, 0, 0, 2);
-        this.aabbColor = new Color(0, 1, 0, 0.5);
-        this.drawBones = true;
-        this.drawRegionAttachments = true;
-        this.drawBoundingBoxes = true;
-        this.drawMeshHull = true;
-        this.drawMeshTriangles = true;
-        this.drawPaths = true;
-        this.drawSkeletonXY = false;
-        this.drawClipping = true;
-        this.premultipliedAlpha = false;
-        this.scale = 1;
-        this.boneWidth = 2;
-        this.bounds = new SkeletonBounds();
-        this.temp = new Array();
-        this.vertices = Utils.newFloatArray(2 * 1024);
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
     }
     draw(shapes, skeleton, ignoredBones) {
@@ -13412,22 +14746,20 @@ class SkeletonDebugRenderer {
     dispose() {
     }
 }
-SkeletonDebugRenderer.LIGHT_GRAY = new Color(192 / 255, 192 / 255, 192 / 255, 1);
-SkeletonDebugRenderer.GREEN = new Color(0, 1, 0, 1);
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -13440,10 +14772,13 @@ SkeletonDebugRenderer.GREEN = new Color(0, 1, 0, 1);
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class Renderable {
+    vertices;
+    numVertices;
+    numFloats;
     constructor(vertices, numVertices, numFloats) {
         this.vertices = vertices;
         this.numVertices = numVertices;
@@ -13452,18 +14787,20 @@ class Renderable {
 }
 ;
 let SkeletonRenderer$2 = class SkeletonRenderer {
+    static QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
+    premultipliedAlpha = false;
+    tempColor = new Color();
+    tempColor2 = new Color();
+    vertices;
+    vertexSize = 2 + 2 + 4;
+    twoColorTint = false;
+    renderable = new Renderable([], 0, 0);
+    clipper = new SkeletonClipping();
+    temp = new Vector2();
+    temp2 = new Vector2();
+    temp3 = new Color();
+    temp4 = new Color();
     constructor(context, twoColorTint = true) {
-        this.premultipliedAlpha = false;
-        this.tempColor = new Color();
-        this.tempColor2 = new Color();
-        this.vertexSize = 2 + 2 + 4;
-        this.twoColorTint = false;
-        this.renderable = new Renderable([], 0, 0);
-        this.clipper = new SkeletonClipping();
-        this.temp = new Vector2();
-        this.temp2 = new Vector2();
-        this.temp3 = new Color();
-        this.temp4 = new Color();
         this.twoColorTint = twoColorTint;
         if (twoColorTint)
             this.vertexSize += 4;
@@ -13569,7 +14906,7 @@ let SkeletonRenderer$2 = class SkeletonRenderer {
                     batcher.setBlendMode(blendMode, premultipliedAlpha);
                 }
                 if (clipper.isClipping()) {
-                    clipper.clipTriangles(renderable.vertices, renderable.numFloats, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint);
+                    clipper.clipTriangles(renderable.vertices, triangles, triangles.length, uvs, finalColor, darkColor, twoColorTint);
                     let clippedVertices = new Float32Array(clipper.clippedVertices);
                     let clippedTriangles = clipper.clippedTriangles;
                     if (transformer)
@@ -13612,22 +14949,25 @@ let SkeletonRenderer$2 = class SkeletonRenderer {
         }
         clipper.clipEnd();
     }
+    /** Returns the {@link SkeletonClipping} used by this renderer for use with e.g. {@link Skeleton.getBounds} **/
+    getSkeletonClipping() {
+        return this.clipper;
+    }
 };
-SkeletonRenderer$2.QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -13640,8 +14980,8 @@ SkeletonRenderer$2.QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 ;
 const quad = [
@@ -13653,9 +14993,18 @@ const quad = [
 const QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
 const WHITE = new Color(1, 1, 1, 1);
 class SceneRenderer {
+    context;
+    canvas;
+    camera;
+    batcher;
+    twoColorTint = false;
+    batcherShader;
+    shapes;
+    shapesShader;
+    activeRenderer = null;
+    skeletonRenderer;
+    skeletonDebugRenderer;
     constructor(canvas, context, twoColorTint = true) {
-        this.twoColorTint = false;
-        this.activeRenderer = null;
         this.canvas = canvas;
         this.context = context instanceof ManagedWebGLRenderingContext ? context : new ManagedWebGLRenderingContext(context);
         this.twoColorTint = twoColorTint;
@@ -14087,17 +15436,17 @@ var ResizeMode;
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -14110,8 +15459,8 @@ var ResizeMode;
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 let spinnerImage;
 let logoImage;
@@ -14119,15 +15468,16 @@ let loaded = 0;
 const FADE_IN = 1, FADE_OUT = 1;
 const logoWidth = 165, logoHeight = 108, spinnerSize = 163;
 class LoadingScreen {
+    renderer;
+    logo = null;
+    spinner = null;
+    angle = 0;
+    fadeOut = 0;
+    fadeIn = 0;
+    timeKeeper = new TimeKeeper();
+    backgroundColor = new Color(0.135, 0.135, 0.135, 1);
+    tempColor = new Color();
     constructor(renderer) {
-        this.logo = null;
-        this.spinner = null;
-        this.angle = 0;
-        this.fadeOut = 0;
-        this.fadeIn = 0;
-        this.timeKeeper = new TimeKeeper();
-        this.backgroundColor = new Color(0.135, 0.135, 0.135, 1);
-        this.tempColor = new Color();
         this.renderer = renderer;
         this.timeKeeper.maxDelta = 9;
         if (!logoImage) {
@@ -14146,9 +15496,8 @@ class LoadingScreen {
         }
     }
     dispose() {
-        var _a, _b;
-        (_a = this.logo) === null || _a === void 0 ? void 0 : _a.dispose();
-        (_b = this.spinner) === null || _b === void 0 ? void 0 : _b.dispose();
+        this.logo?.dispose();
+        this.spinner?.dispose();
     }
     draw(complete = false) {
         if (loaded < 2 || (complete && this.fadeOut > FADE_OUT))
@@ -14199,23 +15548,40 @@ class LoadingScreen {
             renderer.drawTextureRotated(this.spinner, (canvas.width - spinnerSize) / 2, (canvas.height - spinnerSize) / 2, spinnerSize, spinnerSize, spinnerSize / 2, spinnerSize / 2, this.angle, tempColor);
         renderer.end();
     }
+    drawInCoordinates(x, y) {
+        if (loaded < 2)
+            return;
+        this.timeKeeper.update();
+        let renderer = this.renderer;
+        renderer.batcher.setBlendMode(BlendMode.Normal, true);
+        if (!this.logo) {
+            this.logo = new GLTexture(renderer.context, logoImage);
+            this.spinner = new GLTexture(renderer.context, spinnerImage);
+        }
+        const shiftedX = x - logoWidth / 2;
+        const shiftedY = y - logoHeight / 2;
+        renderer.drawTexture(this.logo, shiftedX, shiftedY, logoWidth, logoHeight);
+        this.angle -= this.timeKeeper.delta * 500;
+        if (this.spinner)
+            renderer.drawTextureRotated(this.spinner, shiftedX, shiftedY - 25, spinnerSize, spinnerSize, spinnerSize / 2, spinnerSize / 2, this.angle);
+    }
 }
 let SPINNER_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKMAAACjCAYAAADmbK6AAAALKElEQVR42u2de2iW5R/GPzuqcwfnnKfNmafl5tTNHWzqNi3DEMQykcAoJSsySkspjSIk0iD/07Kf4R+FnVBDUTshZGpWUEJaaiWFgZlUFmXmIe3HNXthyebeZ77P9H13ffBG8Y8H7ut7vff93N/7fu4vGGPiFZiez/Qtw9lytJajfzfw9z/j+efPOv7cV8W+lUNY2a8T/ayTCRsWFLJA5rtUO1LLkV5p9LJeJizQiHeqnlOtmVFtdTGrrZkJCxYXsTgaI6r9MY4/UpNItW4mFDaXsTlaM6qVZlBq3UwofFrJp0HMWJ9DvXUzobCznJ1BzFjWlTLrZkJh/TDWBzFjTgo51s2EgnKI0Rrx+FiOWzNzVaym91Syx5qZsGBWb2ZFa0ZN6dbMhAWTcpkUrRmXD2K5NTNhgVbH0Zpxbl/mWjMTFvRIo0e0ZpzcncnWzISKtvmiMWNRJ4qslwmVXRXsas2Ix8ZwzFqZsGFREYtaM+Oaa1ljrUzYkJ9G/ok6TlzKjJWZVFor0y7c1Zu7WjLiqiGsskamXdHopyT4vALmzS9k/t19uHtKHlOSIMn6xAtARjIZ1sFcUSZ0Y4La+G6M18hS2IlCn4a+WoC0JNL0d/dUupdnUj40g6EJ2VEdMnhrOG/p5f/jUXz8SgmvaGU6KpNRNsLVQV0OdXf24s63h/P2gWoOrBjMCr2GJFQnnxnIM3q5P1PPmaYv+4ev4/C6UtbpV2gzXCkgL5W8Bwt48OIc6ul6Tp+s4+SyASxLiI4+PYCn1bHzDZxvaQW6vZzto7MYnQIpNkf7kp5EuozYUroqEjcNKHHd0Tl9mBPN1pk+hFeieGBnBtog7UXjsj9pWg+m6duecw2cay1OC/uxMC47KmP9OIYfoz1YoC20J/rzRG4quTZK2EAyJGs20qwUbYw0aNRmUxtvfUW/uEtNzc1NB1/X8LVyd15hh82F43AvD+VlXcsSJEZa1CQ3ejleAO7oxR3RDP0XN91X4+NXYb8nkv7UNTwV7e0YTdu7I3g33t7tuaEbNwSZpps2fSyvs4M2Tjhot+jb0Xzbltj8r5j/xVt/6Z1Ob93U1ZYO691EhhzchcHeXosVjcNZysyezLw4xRZt05R+fTeuj8vOj+zKyG0j2aZcVVs6v+QalnjrMFZASQYl2nBoSyz06e3j/Xk8rgWYmMvEICu2pm1HOTuc7okV8FgRj0XukwzanhvCc/F+72TjoQjdObN1OFuDLmh0xP+WHtxiI10ukJlCprb4guiv1fP+avZrS1C7NAkliHZjDtZwMMgqbukAltpMlwuMy2FcEBPqvfLLar5Uqi0hBdEwryy+Mv5n6zkbjTBa+dlMlwvUZFETZKGiFM7tvbhdJ3gSVRO0wzIjnxmvl/J6a6JsGMYGrahtpssFeqbR841S3mhN80OjOaSDEdqd6SjaMKgzgzRK7q1ib3PT9sYyNo7JZoyNFNvRcVMZmy7WOvIuryv/Zvdmdt90+nY0bRp3AvROohFwdwW7dTG7RFlbwlqdrbOBYg005NAQmZU0HWt1rXMBH1Xw0dQ8pmqzoaPmdhun7bHZjNVe9qP9eFQfO1VkUmHjhAVUZ1GtnKFSbjrkrPfy4i4UW5t/6ZxM54J0CqxFe81KpGsQyE4h23oYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjLna+bdOy+IiFquIpGq16Pb79cNYv3IIK/X/ugx+Ui6TVKvYVU9Nc8gX8od8Ir/IN/KPfCQ/yVfyl/6/pfJvLChkQdD6wyqntquCXYuKWJSfRr6D0dEAxV3xlw/khyD+kd/ku/88cHo+09tS3LBpO1HHCVUqcIA6CqB4K+6X6x35L/JM2loXurlWmUmlA5XogOIcK8/If5HncrSWo7F6cKIWPjT/RXGOlWfkv8hzaWsN4uaaysE6WIkOKM6x8oz8F3kusXqo2vxC5jtYiQ4ozrH0TeS5qIZcrB7qkrwdA8U5Vp6R/yLPZV8V+2L14Cl5THGwEh1QnGPlGfkv8lyUlIzFQ1cNYVVHrcjZ0VCcFe9Y+Eb+izy3ceclUl43aFN52DXXssYpnY6a4qFS8ZcP2uIf+e7inRh6pdFrdTGrm8uiHx/L8T2V7NGWzvJBLJ/bl7mTuzO5qBNFDoiJID/IF/KHfCK/yDfyT3O7d/KbfNfS80hNIrU0g9L6HOq1x5iTQo6FNpeLfCQ/yVfyl3xmXYwxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHGGGOMMcYYY4wxxhhjjDHNk9z4JwJ0SqKTdQkbyEwhU393T6V7zzR6pieR3tE1ITeVXImhe6BXDGZFdRbVeank2TBhcaEMr0rwbixj49IBLL2/L/ffmMuNHfqO9tFZjJYBd1ewO3Lx+IcVfKhqna5nHZYR6XFPH+5R3eeI5t9fx/fvjeC9Jdew5OKZKqFR/RDVKL6vL/f9PJafmyvHsL+a/ff24V6NmjZQbGchVbY6UM2BluqHv1rCqzVZ1KQlkZboepCdQvacPsz5bjTfXao+yMEaDt7Wk9tSIMVGig3TejCtJSM2bSpkPjWPqd1S6Zao+lORSYWmgkOjORRNwZqd5ezMSiHLRooNr5XwWjS6/1XHX9vL2T67N7M1iyXa9JCrYjVrS1gbpJyw6hBfsmiNCYT0P9/A+Wj1/6qGr5YNYFlJBiWJogEzezLz/ZG8/9s4fgtSyuvNYbyp1IONFBtu7sHNv4/j9yAxUHWrdaWsG9+N8XHd+YxkMpSy+aySz841cC5oXbmHCnnI74yxAgZ3YbDeB4PEQCOpBpFNZWwa2ZWRcdnxLsl00crtRB0n2lLg8JNRfDKoM4NsolgBSmw/UMADba1+qpmqfyf6x1u/0a/og3I+aEunP6/i86osqmygcGarF4p54dex/Bo0LqfqOfVwIQ/HW5/RSkwV1oN2WLlHTc82TljAwM4M1O5LWwYKZTjibYXNS0N5KcjKTe10PadfLObFuJwK4ozp+UzXDBTUjL+M5ZcBnRkQV53dMIwNQTu6bSTbVEzbi5awuVByd2E/FgaN0Tc1fKOzBHHV2aAdVSdv6s5NNkp7cSH/++xAng2yyHx+CM/H21YhfdPp+0U1X0TbSZnXx8faG9Aop0MS0cToh1p+iLcpOkLj9t/JOk5eqoPHxnDsyf486an5yqCDK7XZ1O4oZ4dWyy3FSXHUAYq47uyYbMZoGmhpG3DlEFb6uNiVBhpyaHhnBO8oJmfqOROJjzIiP43hJ8UxITqqX56S2Hur2KsOnq3nrE6PPNKPRwrSKbAZrjTQNZmuE7oxYXMZmxWbw9dxWFu4W4ezVedOE6qzI7oyYkY+M7TPeWsPbk2UX1qioSN+E3OZqOR2cReKE+qQRFN0Pi7y73g/UawU1KzezJpXwLz5hczX1ueUPKYkNb6GJQZ+j7/aAfRZREsv+quGsMoamXZBW2Gt5eU0alorEzYsKmJRa/m4NdeyxlqZsCGa84DKnVorEzboC7podis69DfIJmwufHMc7famvvmxZiYsKOtKWbRm1OcW1syEBboSJFozLh/EcmtmwgIluaM14/phrLdmJixYXMTiaM24p5I91syEBTphFOR7Y2tmwgJNvUFOr+tov3UzoaAv44KYUatv62ZCoemdhtG0+hzqrZsJBR08DWLG0gxKrZu50qvpxos3U5NItW4mFPp1ot+lPlpq2lYXs9qamVBZUMiC1ox4pJYjvlfStAu6GmTLcLboMtPIV4/6im5fFfuUi9QIap2MiWP+D96R1vPmsD/fAAAAAElFTkSuQmCC";
 let SPINE_LOGO_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKUAAABsCAYAAAALzHKmAAAQ7klEQVR42u3da4xdVRUA4D0zd2Y6nZY59DVtZ1puS9+lzC0YAi2UQ8AAQczFpPgA9VIeIQbirRqJ0cBUBVGjDr/QCKSNRSMmpuODxAdxqhgwxkhFjf6Sxh/+UUNVNGJCzR7uTvas7LXX2q9zzp3em6y0gTN3Zu75utZe5+yztxC9V+/Ve5X9En1Vjd7J6SFbLNF7naPw+l2jh7YHMBWssqMHtlsRdim4qsLtIawaPiHEQOLoNrA9iIkQDnRrVA1qD2LZ8ISoxYqKo13sQAtBWBayQWZUAXGRQM9JjCngDVY0UqJNDbQrMcaGmArdUKpIjbYiQLsCZCyIMQBy8QwnilR4Q5AuCpxFYvRFmBLbEiwKwpsSaWycVQGZBKMrwBjA9BhxDe57u2L2hOoKNCbOrgAZitEVYUxoKSMErQvSxYIzCkguRg5EF4AUhqUlhy/YUKSxcRaKsioYOQhD4I0yYxkR3PcJBcuFysmgsXAWBTMJyBCMIQh9kGGxXIXvexCQXbHGAMrBWTbM2CCpMSMLIxehC77lSJwXGth7M0FzoVJIXXDWQnGmhOkL0ic7YhhtWdGGkAuPAjUWGoF4faCmwBkbZmyUqUCyMqMLRA4+E6IsdTjidUHKBYrh9CnpRcH0ypKxsyOGEYNIIeTCOz91OIJ1QYoB5eAMyZo+MFNnyVTZ0YiRC9EGEMOyAgshxErHsL2XK1gOUgwohtM1a5YNM7Rsu4K0ZkcbRm4mpPBRwFZ5hg9eCqkrUB+csWGGogzNkqEgrdnRhpGLkINudaLgwvVB6oqzCjCTZElb2Y4B0gUjBtEG0ARnDRLjjoG9DwcshtQGlIPTljVjwUySLWNkyRCQVHa0ZUUTRAwgF91a33BEy0VKAcVwwqwZC2bqbOlUurllOxQkJzNyINoAYqjWhYYjWg5SCiiG05Q1U8FMjTIoS8YE6YORi1BHtJ4KIcQEEtTXUWAxpK44YVlPBdO1jCdFWTZIE8bVGEYMIRPcZGBw4HKQcoBiOE1ZMzbMgVQwU6JMAdKEEcuIJogUvg1YCCE2gsCO42DlIIVAKZwpYJaSLVNnSU6XjYHUmxhTmXaFaMO3EYkLqMC+FsLlIoVAKZzMrEnBhJeLfLNlKMrYWRIDCbOkFSSVHbHM6AKRC6/ODUewNqQ+OLlZkxpjUmV8MBbMUJSxyzY3Q1IgTRgxiBRCHdem0KDAUkBh9sRwwjEnAXMMgTnKhFlUtiwkS5rGka4g9SaGgxFmRC7AzTCEEBcyA36dDSsXqAtOLkysjGMwY5XxVChjZ0kuSCo7YlkRQsQQYtDEFsegsLoCxUp7Kpgps2UslFGzJGccSYHUmxhOZqwzEZqAbfUMCisHKIZzgsCpl3MTzMwTpi1bYp2477gyFKUxS7qWbdjY2EBS2dGE0QQRA7gNCyHEdhjE8RhUDlBT9tzgmjWZMFNlSy+Urk1OzCyJlW0XkK4YOQh1cDtcgwBrQmoDWkdgboBZE8mYsJSHlnFbJ+5bwmOPJ7lZkirbC8aRsMvmgtTHjBhGE0QbwJ2egUE1ITVlUC5OmDVdYNrKuN70xM6WoShjlW4464dbtiFIWK6x7GjESEHUUe0iYncnbMdQSE0Z1ITTNOb0hRmjjLtmS9dmJ2rp1jtuKktyyrb6YLEMCUHq2dGG0QQRQ7f72kzc+cJecerne8Wvv7JNPHPvenEkz8Sh3UtFc92QyGt9Yko/HgOLAIUZlItTz5ouMF3KuE+2jFLCQ1D6lm6fLMkBacuOJowYRBUXyfjuHjF3NhdnsfjvAfH6E9vFt9XxKgikEKgJZyyYalzOLeMu2bLbULI6bh+QGwmQ+rgRlumdGEQAao+K56bEL2woVUwOiev0r8OAUjiJrMmFCbvykGxZRAmPitK1dHM7bohyMsuyi/I8f0+e57fJYIKEZXpXo9E4mOf5XTKyLLvCBLETF8uY2SKepkC+dpX4T02Ivepr4HvZcOZ5fmee54fyPL+DmTUhzAs6n4n8bN5dr9f3YdkSg8nsxG0lPBVKVpNjG0/aGhzfLDmRZdnumZmZp8+c+cdZPV555fSr7Xb7s0jJ3i5Pcue4MxKkPPkvvXTqz/B92u32l0wYOzG1fkhcd/py8Rcbyq/vFM/KY1WA95h/3zzP71bfU6JsNpsfgj+P/FlbrdaDGExYyuXvLz8H+DudODH700ajcSM3W6Yu4alQ1spCOTd38jcKocTZbh9+9NixY99XJ8AEUkcpo9W64yH197m5k7+bnZ19QT+J09NHntQhwji/Jg58qi6++ofLxJ8gSFneVw2Ka4QQDfh1Ok4dZavVmtZ/nrm5k7/Vf55O1tRhboUw5+ZOvqyOl5+R/FyOHj32PYVU/tloNG5IXcKrhJIzngwp3fNjomazea/64BuNxts646f50lWv169utw9/DmtqdJQyZFaSJVuV6nq9fqMEof5/vV6/CYBqgJDlee+yAbF/+4i4ZWqZeNfaIfHWzn+Hx0KcEuU9+s8jv3ej0bhVlXOZydX/k0iRMeb8P0D5e6tj8zy/Xb9UJIc56h/yqVOnXul8lmuZ2bJslKmbHG7XrbpCmCXFRLvdfqQD6jTS3Jiy5I4OykM6ADV+1Eu1DmV6evopBORexzDi1L+X/HnGxsb2w3Hm9PSRJ9QxWPOTZdmlKht2hi+w6dkox5bqffI8fye3hDteGqKaHVsHXihKl0tB+h0cY+lute54AGRKDCW89LNTRynHb7ChUWVVjetOnJh9EYBUyPZeNCoOtsbFQwdXi4/esELcd+tq8cCHJ8UXp+viy9efLz7AgamjlKXc1AA1m83DoIRDlFubzeb96hhZLVTlgJ24gttutx+ONa50bHZKRenaeTs1OfpAfnr6yOOdE7EZdNwmlKocntXLNkA5JTGq47Ds+Lf94lWsyfnXleLfnIwJUN4DOnNYwuUxh2A3Ln9XULrfK8t3J27Tu3BVwiOjXJqoAy8UZej1yclGo3GTLN+gu3w+z/P3YaWbQqk3Ne12e4ZC+c8rxWsYytcPiP9RpZxCqWDKnxOiBNlyAUpOnGsoh4tA2Rm8X9xqtT6md5wyZmYe+0YRKL+1S/wYQ3n8zctBl5SBUv5djivfjMOPduIzcizeiYfr9foVvUwZG+XCuzibZKnSceZ5/v4QlKp8y7ElhnJlTeTP7BI/kllRYfzrfvHqFy4UX1vaL/aVlSmROzwbwdS29T2UcEwZF+V8ozM2lu1VY812u/15akypGh3TmFJesJbHHD167IdUxz3YJy5bNySuX1mbvy55CbMLtzU6tjGlsdFptVqfUMc0Go23F4wy1l2dSnbfvpMwVPe9WWVLDsrOJaF9MFu2Wq1PqmNkGce67xiXhTjdNwdlvV6/BgxfbPfBfVCetxi6b9/rlCup65QzM48dl2OjLMv26CibzeZ96sTIzEFdpwQXz9U1yrtVlpR/Zll2Fec65Y6l4pbbx8XHH9kknvzJlPjlHy8Tp29eKT5ou0aJoIT3w3dBlLDzVpfAJEZ1XOdaJZxnOSlvPMjPzxFljIvng914RwebsjYO7uhMyHu46sOfnf3Oz2TXDW6vvYxdFoIXz3Wc8J5zs9n8iOn2IrxTc2BM3Glqdp7dI553uaOjxrhwcob+MyuUpjs6WZZdon8OcigjPx8V+u+GTWFTSWEx3WYcdJ225jNDSE4q0GHCzlueHOyujn6bUWYgeb9ZZUaQPe+GzQ+Gc8+oOGhC+c1d4gfI16n3XDAhQ7+9qE9l01E2Go132GYKyXE1NiFDTcpoNpv3LOYJGWXNErJNW9sEp63p2RKiVPMn1bS1DgxsyhoGdGpmizj+xtXiDYnx7/vFmce3iWdW1cTVGEY4hQ2ZW0nNq8Qm/M6XbXm3S100lwGedFybuvNOibLI+ZS2ceU4eAxiEuvCkfmU8ycToDxETe6FgCBQHeqyAbFvfEhcO7BwDuXFCEbTZF840XeHK0jYcbs2OIGle0mVJ/mmnClEPQqxyTY5I8/zFhif7fSZee4bnrPOU4AssnRXHaVTCTd14dRDY3UbTIiSeFhsN/aMjgnqthFx880rxX3yATL5p3y4LPXzOaBkUyBjZMlYpbtQlIOBD475ZEusjMNSvkXe6VEoJVDkeZ2dzIfIFsRzU+JF2OyM9M9fTC/6SUYOyFQPjQ2nWiUjxnPfw5EeHqMWIqAeIFsAU847lJM2JM6xsewt1OIDLs99P7ZFHNdB/upS8XtPiD7PfLuCXJNolYyyFiNI/Zit65ItrOVafFbHcFohY7hPTN21Tjz4uc3iqfsnxKdX1MTl1OoYRFaMsToGB6Trw2JFP/OdZC2hJZ7ZkrMoAbbSGmelDJ91hFKuJeS7jlBMkJnrAqqJlgMUZS/dArPlGHNdSg5M3xXXtvquuEatvIYtDRhpxbUJuIgqsU5lGWtUploK0KuEU9mSW8YpmFQ556xNuYW7NiW13B+FkMiKHIy+C6eGgBxJvMR0oSv5hi6+z4HJyZoU0M2RVvDlrOQbcxVfX5AhZbuqy0v7ZstYMLHlAVlLTF9ALLbvu9Y5Zylpn/XOsd0ibIvxr2KCLHpp6SCUIdnSZSF+WzfOhem6GD+1KwR3Z4jNjrtDpNoZwmWd8yrupZN6Hx3fbMmFSe0Swdq2ZIPjxk1112Duo8OBGLrBkw/IoncdK2XHsdC9dHz204m50xh3tzFq1zFqtzHXrfCw7OgDsqyNnZLszVijsmXgrmNcmGtS78lIoMX2aJz03fKO2sDJddPQSCDPiQ1DfWBycY6XtXstc2PQKuxgG2McmXTPb9/9vmuJYXKyJrWjbeg+3xPM4O73nWqvbyw7xgZZSJbEUBa157cNJjdr2vb+5iA1YV3HxYscj30PDCEHIgcjtfm8K8hSsmRotkwFk5s1TTghUAopB6xrjHMBBkI0YYTZ0dZlxwLpkiWDULpmy5gwqayZgZNkA7oKQQCxctByYg0XIIEQQuRitGVHblMTA2ShKGPDpC6wu+DEgJqg2rDGDBtAF4Q6RAojp1xXGmSMbImVcR+YWNY04eQCtUG1ofUJ2/uvcETIgUhhdAE5GAlkKShjwHTNmhhODKgJqQ2sC14uOgyfD0IbRF+MlQaZAiZWyn2yJsTJATqGnHQO2Jhh+xlsACFCG0QbRtdyzQFZCZSxYPpmTS7Q5cjJHYNBYIkZpu99HoUQ/o4QIYSIZUZfjJ4ZMjZI32wZBDMU5yhy8pZTULl4XYP5fagMyEVoy4oupTpGduwnkloSlKEwY+AcQU4MhRTD6ovXBRwFzwWgCSEF0QVjJUGmgEllTS5OLlCIlIN1mS9mx/cZ5eLDALpCTI2RAhkTZQqYoTgpoCPECbaBHQ2ETL3PUl98ECAXYijG0OyYAmQoTG7W5ODkAF1CnVgm2JQx4okPA+gCMTbGskBGgRmaOblAh5GTORIrfKFx4VH4EIAxIXIxlg2SBbMvECY3e7oApbDaIgQu5/2HmeEKEINYiwSRi7EQkLFgumZOCuggctKGI4ULZN/vMeSLj0AYMytWEqMLzFg4fYDaoKaC6wvOFR4FkIPQFaILxrJAOsHsc/zlfYDWXE8qF22s8Pz5KHxcgEVALBtjJXBSSEOwFhk1Zgy4hitCT4hVw+gFs8/zwxqIBbUgyK7fcyA0PD9XX4iVxhiC0xdof6STWCsoBmKF7+cVCWFXQYyBMxRpf+STX1b0x45AhN0OMSrOGEirhrY/dfQAdjvS7oy+WCF6r1RIFxXWvlTRg1YVqFWBmxZbD99ig9pt0YPQw9rD1nstVri9V+/Ve3XrS/wfim4P5fIFxLoAAAAASUVORK5CYII=";
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -14228,18 +15594,30 @@ let SPINE_LOGO_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKUAAABsCAY
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 /** Manages the life-cycle and WebGL context of a {@link SpineCanvasApp}. The app loads
  * assets and initializes itself, then updates and renders its state at the screen refresh rate. */
 class SpineCanvas {
+    config;
+    context;
+    /** Tracks the current time, delta, and other time related statistics. */
+    time = new TimeKeeper();
+    /** The HTML canvas to render to. */
+    htmlCanvas;
+    /** The WebGL rendering context. */
+    gl;
+    /** The scene renderer for easy drawing of skeletons, shapes, and images. */
+    renderer;
+    /** The asset manager to load assets with. */
+    assetManager;
+    /** The input processor used to listen to mouse, touch, and keyboard events. */
+    input;
+    disposed = false;
     /** Constructs a new spine canvas, rendering to the provided HTML canvas. */
     constructor(canvas, config) {
         this.config = config;
-        /** Tracks the current time, delta, and other time related statistics. */
-        this.time = new TimeKeeper();
-        this.disposed = false;
         if (!config.pathPrefix)
             config.pathPrefix = "";
         if (!config.app)
@@ -14310,6 +15688,7 @@ var spineWebGL = {
     AnimationState: AnimationState,
     AnimationStateAdapter: AnimationStateAdapter,
     AnimationStateData: AnimationStateData,
+    AssetCache: AssetCache,
     AssetManager: AssetManager$2,
     AssetManagerBase: AssetManagerBase,
     AtlasAttachmentLoader: AtlasAttachmentLoader,
@@ -14348,6 +15727,8 @@ var spineWebGL = {
     IkConstraint: IkConstraint,
     IkConstraintData: IkConstraintData,
     IkConstraintTimeline: IkConstraintTimeline,
+    get Inherit () { return Inherit; },
+    InheritTimeline: InheritTimeline,
     Input: Input,
     IntSet: IntSet,
     Interpolation: Interpolation,
@@ -14382,6 +15763,16 @@ var spineWebGL = {
     PathConstraintMixTimeline: PathConstraintMixTimeline,
     PathConstraintPositionTimeline: PathConstraintPositionTimeline,
     PathConstraintSpacingTimeline: PathConstraintSpacingTimeline,
+    get Physics () { return Physics; },
+    PhysicsConstraintDampingTimeline: PhysicsConstraintDampingTimeline,
+    PhysicsConstraintGravityTimeline: PhysicsConstraintGravityTimeline,
+    PhysicsConstraintInertiaTimeline: PhysicsConstraintInertiaTimeline,
+    PhysicsConstraintMassTimeline: PhysicsConstraintMassTimeline,
+    PhysicsConstraintMixTimeline: PhysicsConstraintMixTimeline,
+    PhysicsConstraintResetTimeline: PhysicsConstraintResetTimeline,
+    PhysicsConstraintStrengthTimeline: PhysicsConstraintStrengthTimeline,
+    PhysicsConstraintTimeline: PhysicsConstraintTimeline,
+    PhysicsConstraintWindTimeline: PhysicsConstraintWindTimeline,
     PointAttachment: PointAttachment,
     PolygonBatcher: PolygonBatcher,
     Pool: Pool,
@@ -14441,7 +15832,6 @@ var spineWebGL = {
     TransformConstraint: TransformConstraint,
     TransformConstraintData: TransformConstraintData,
     TransformConstraintTimeline: TransformConstraintTimeline,
-    get TransformMode () { return TransformMode; },
     TranslateTimeline: TranslateTimeline,
     TranslateXTimeline: TranslateXTimeline,
     TranslateYTimeline: TranslateYTimeline,
@@ -14457,17 +15847,17 @@ var spineWebGL = {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -14480,8 +15870,8 @@ var spineWebGL = {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 class CanvasTexture extends Texture {
     constructor(image) {
@@ -14494,17 +15884,17 @@ class CanvasTexture extends Texture {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -14517,8 +15907,8 @@ class CanvasTexture extends Texture {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 let AssetManager$1 = class AssetManager extends AssetManagerBase {
     constructor(pathPrefix = "", downloader = new Downloader()) {
@@ -14528,17 +15918,17 @@ let AssetManager$1 = class AssetManager extends AssetManagerBase {
 
 /******************************************************************************
  * Spine Runtimes License Agreement
- * Last updated July 28, 2023. Replaces all prior versions.
+ * Last updated April 5, 2025. Replaces all prior versions.
  *
- * Copyright (c) 2013-2023, Esoteric Software LLC
+ * Copyright (c) 2013-2025, Esoteric Software LLC
  *
  * Integration of the Spine Runtimes into software or otherwise creating
  * derivative works of the Spine Runtimes is permitted under the terms and
  * conditions of Section 2 of the Spine Editor License Agreement:
  * http://esotericsoftware.com/spine-editor-license
  *
- * Otherwise, it is permitted to integrate the Spine Runtimes into software or
- * otherwise create derivative works of the Spine Runtimes (collectively,
+ * Otherwise, it is permitted to integrate the Spine Runtimes into software
+ * or otherwise create derivative works of the Spine Runtimes (collectively,
  * "Products"), provided that each user of the Products must obtain their own
  * Spine Editor license and redistribution of the Products in any form must
  * include this license and copyright notice.
@@ -14551,16 +15941,19 @@ let AssetManager$1 = class AssetManager extends AssetManagerBase {
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES,
  * BUSINESS INTERRUPTION, OR LOSS OF USE, DATA, OR PROFITS) HOWEVER CAUSED AND
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
- * SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THE SPINE RUNTIMES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 const worldVertices$1 = Utils.newFloatArray(8);
 let SkeletonRenderer$1 = class SkeletonRenderer {
+    static QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
+    static VERTEX_SIZE = 2 + 2 + 4;
+    ctx;
+    triangleRendering = false;
+    debugRendering = false;
+    vertices = Utils.newFloatArray(8 * 1024);
+    tempColor = new Color();
     constructor(context) {
-        this.triangleRendering = false;
-        this.debugRendering = false;
-        this.vertices = Utils.newFloatArray(8 * 1024);
-        this.tempColor = new Color();
         this.ctx = context;
     }
     draw(skeleton) {
@@ -14671,12 +16064,14 @@ let SkeletonRenderer$1 = class SkeletonRenderer {
     // Apache 2 licensed
     drawTriangle(img, x0, y0, u0, v0, x1, y1, u1, v1, x2, y2, u2, v2) {
         let ctx = this.ctx;
-        u0 *= img.width;
-        v0 *= img.height;
-        u1 *= img.width;
-        v1 *= img.height;
-        u2 *= img.width;
-        v2 *= img.height;
+        const width = img.width - 1;
+        const height = img.height - 1;
+        u0 *= width;
+        v0 *= height;
+        u1 *= width;
+        v1 *= height;
+        u2 *= width;
+        v2 *= height;
         ctx.beginPath();
         ctx.moveTo(x0, y0);
         ctx.lineTo(x1, y1);
@@ -14690,11 +16085,18 @@ let SkeletonRenderer$1 = class SkeletonRenderer {
         v1 -= v0;
         u2 -= u0;
         v2 -= v0;
-        var det = 1 / (u1 * v2 - u2 * v1), 
+        let det = u1 * v2 - u2 * v1;
+        if (det == 0)
+            return;
+        det = 1 / det;
         // linear transformation
-        a = (v2 * x1 - v1 * x2) * det, b = (v2 * y1 - v1 * y2) * det, c = (u1 * x2 - u2 * x1) * det, d = (u1 * y2 - u2 * y1) * det, 
+        const a = (v2 * x1 - v1 * x2) * det;
+        const b = (v2 * y1 - v1 * y2) * det;
+        const c = (u1 * x2 - u2 * x1) * det;
+        const d = (u1 * y2 - u2 * y1) * det;
         // translation
-        e = x0 - a * u0 - c * v0, f = y0 - b * u0 - d * v0;
+        const e = x0 - a * u0 - c * v0;
+        const f = y0 - b * u0 - d * v0;
         ctx.save();
         ctx.transform(a, b, c, d, e, f);
         ctx.clip();
@@ -14764,8 +16166,6 @@ let SkeletonRenderer$1 = class SkeletonRenderer {
         return vertices;
     }
 };
-SkeletonRenderer$1.QUAD_TRIANGLES = [0, 1, 2, 2, 3, 0];
-SkeletonRenderer$1.VERTEX_SIZE = 2 + 2 + 4;
 
 var spineCanvas = {
     __proto__: null,
@@ -14774,6 +16174,7 @@ var spineCanvas = {
     AnimationState: AnimationState,
     AnimationStateAdapter: AnimationStateAdapter,
     AnimationStateData: AnimationStateData,
+    AssetCache: AssetCache,
     AssetManager: AssetManager$1,
     AssetManagerBase: AssetManagerBase,
     AtlasAttachmentLoader: AtlasAttachmentLoader,
@@ -14809,6 +16210,8 @@ var spineCanvas = {
     IkConstraint: IkConstraint,
     IkConstraintData: IkConstraintData,
     IkConstraintTimeline: IkConstraintTimeline,
+    get Inherit () { return Inherit; },
+    InheritTimeline: InheritTimeline,
     IntSet: IntSet,
     Interpolation: Interpolation,
     MathUtils: MathUtils,
@@ -14821,6 +16224,16 @@ var spineCanvas = {
     PathConstraintMixTimeline: PathConstraintMixTimeline,
     PathConstraintPositionTimeline: PathConstraintPositionTimeline,
     PathConstraintSpacingTimeline: PathConstraintSpacingTimeline,
+    get Physics () { return Physics; },
+    PhysicsConstraintDampingTimeline: PhysicsConstraintDampingTimeline,
+    PhysicsConstraintGravityTimeline: PhysicsConstraintGravityTimeline,
+    PhysicsConstraintInertiaTimeline: PhysicsConstraintInertiaTimeline,
+    PhysicsConstraintMassTimeline: PhysicsConstraintMassTimeline,
+    PhysicsConstraintMixTimeline: PhysicsConstraintMixTimeline,
+    PhysicsConstraintResetTimeline: PhysicsConstraintResetTimeline,
+    PhysicsConstraintStrengthTimeline: PhysicsConstraintStrengthTimeline,
+    PhysicsConstraintTimeline: PhysicsConstraintTimeline,
+    PhysicsConstraintWindTimeline: PhysicsConstraintWindTimeline,
     PointAttachment: PointAttachment,
     Pool: Pool,
     get PositionMode () { return PositionMode; },
@@ -14868,7 +16281,6 @@ var spineCanvas = {
     TransformConstraint: TransformConstraint,
     TransformConstraintData: TransformConstraintData,
     TransformConstraintTimeline: TransformConstraintTimeline,
-    get TransformMode () { return TransformMode; },
     TranslateTimeline: TranslateTimeline,
     TranslateXTimeline: TranslateXTimeline,
     TranslateYTimeline: TranslateYTimeline,
@@ -15098,7 +16510,7 @@ class SkeletonRenderer {
 }
 
 var name = "@melonjs/spine-plugin";
-var version = "1.5.0";
+var version = "1.6.0";
 var description = "melonJS Spine plugin";
 var homepage = "https://github.com/melonjs/spine-plugin#readme";
 var type = "module";
@@ -15144,7 +16556,7 @@ var files = [
 	"CHANGELOG.md"
 ];
 var peerDependencies = {
-	melonjs: "^15.12.0"
+	melonjs: "15.12.0"
 };
 var dependencies = {
 	"@esotericsoftware/spine-canvas": "^4.2.23",
@@ -15434,11 +16846,21 @@ class Spine extends Renderable$1 {
 
         if (this.renderer.WebGLVersion >= 1) {
             this.runtime = spineWebGL;
+            this.gl = this.renderer.gl;
+            this.canvas = ( version$1.split(".").map(Number).reduce((a, v, i) => a || v - "17.0.0".split(".")[i], 0) > 0 ) ? this.renderer.renderTarget.canvas : this.renderer.canvas;
+            this.context = this.renderer;
+            this.twoColorTint = true;
+            this.batcherShader = this.runtime.Shader.newTwoColoredTextured(this.canvas);
+            this.batcher = new this.runtime.PolygonBatcher(this.canvas, true);
+            this.shapesShader = this.runtime.Shader.newColored(this.canvas);
+            this.shapes = new this.runtime.ShapeRenderer(this.canvas);
+            this.skeletonRenderer = new this.runtime.SkeletonRenderer(this.canvas, true);
+            this.skeletonDebugRenderer = new this.runtime.SkeletonDebugRenderer(this.canvas);
         } else {
             this.runtime = spineCanvas;
+            this.skeletonRenderer = new SkeletonRenderer(this.runtime);
         }
 
-        this.skeletonRenderer = new SkeletonRenderer(this.runtime);
 
         // force anchorPoint to 0,0
         this.anchorPoint.set(0, 0);
@@ -15464,7 +16886,7 @@ class Spine extends Renderable$1 {
     }
 
     /**
-     * Whether to enabler the debug mode when rendering the spine object
+     * Whether to enable the debug mode when rendering the spine object
      * @default false
      * @type {boolean}
      */
@@ -15550,10 +16972,14 @@ class Spine extends Renderable$1 {
      * @returns {Spine} Reference to this object for method chaining
      */
     rotate(angle, v) {
-        // rotation for rootBone is in degrees (anti-clockwise)
-        this.skeleton.getRootBone().rotation -= Math$1.radToDeg(angle) + 90;
-        // melonJS rotate method takes radians
-        return super.rotate(angle, v);
+        if (this.renderer.WebGLVersion >= 1) {
+            this.skeleton.getRootBone().rotation -= Math$1.radToDeg(angle);
+        } else {
+            // rotation for rootBone is in degrees (anti-clockwise)
+            this.skeleton.getRootBone().rotation -= Math$1.radToDeg(angle) + 90;
+            // melonJS rotate method takes radians
+            return super.rotate(angle, v);
+        }
     }
 
      /**
@@ -15644,26 +17070,113 @@ class Spine extends Renderable$1 {
             rootBone.y = this.pos.y;
 
             // world transforms
-            this.skeleton.updateWorldTransform();
+            this.skeleton.updateWorldTransform(Physics.update);
 
             // update Bounds
             this.updateBounds();
 
             // world transforms
-            //this.skeleton.updateWorldTransform();
+            //this.skeleton.updateWorldTransform(Physics.update);
         }
         return true;
     }
 
 
     /**
-     * draw this spine object
-     * @param {CanvasRenderer|WebGLRenderer} renderer - a renderer instance
-     * @param {Camera2d} [viewport] - the viewport to (re)draw
+     * Draw this Spine object using the appropriate renderer.
+     * If WebGL, it uses a PolygonBatcher and custom shader.
+     * Otherwise, it falls back to canvas renderer.
+     *
+     * @param {CanvasRenderer|WebGLRenderer} renderer - A renderer instance.
+     * @param {Camera2d} [viewport] - Optional camera viewport for rendering.
      */
     draw(renderer) {
-        this.skeletonRenderer.draw(renderer, this.skeleton);
+        if (this.renderer.WebGLVersion >= 1) {
+            this.renderer.flush();
+            this.enableRenderer(this.batcher);
+            this.skeletonRenderer.draw(this.batcher, this.skeleton, -1, -1, null);
+            if (this.skeletonRenderer.debugRendering) {
+                this.enableRenderer(this.shapes);
+                this.skeletonDebugRenderer.draw(this.shapes, this.skeleton);
+            }
+            this.end();
+            this.resetRenderer();
+        } else {
+            this.skeletonRenderer.draw(renderer, this.skeleton);
+        }
     }
+
+    /**
+     * Reset the renderer state after using a custom renderer.
+     * Rebinds the default vertex buffer and resets the compositor and shader.
+     */
+    resetRenderer() {
+        if (this.gl.getParameter(this.gl.ARRAY_BUFFER_BINDING) !== this.renderer.vertexBuffer) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.renderer.vertexBuffer);
+        }
+        this.renderer.currentCompositor = undefined;
+        this.renderer.currentProgram = undefined;
+        this.renderer.customShader = undefined;
+
+        this.renderer.setCompositor("quad");
+        this.renderer.currentCompositor.currentTextureUnit = undefined;
+
+        this.gl.disable(this.gl.SCISSOR_TEST);
+        this.gl.enable(this.gl.BLEND);
+    }
+
+    /**
+     * Enable a specific renderer, such as PolygonBatcher, and bind its shader.
+     * Ends the current renderer if one is already active.
+     *
+     * @param {PolygonBatcher} renderer - The renderer to enable.
+     */
+    enableRenderer(renderer) {
+        if (this.activeRenderer === renderer) return;
+        this.end();
+        if (renderer instanceof this.runtime.PolygonBatcher) {
+            this.batcherShader.bind();
+            this.batcherShader.setUniform4x4f(this.runtime.Shader.MVP_MATRIX, this.context.projectionMatrix.val);
+            this.batcherShader.setUniformi("u_texture", 0);
+            this.batcher.begin(this.batcherShader);
+            this.activeRenderer = this.batcher;
+        }
+        else if (renderer instanceof this.runtime.ShapeRenderer) {
+            this.shapesShader.bind();
+            this.shapesShader.setUniform4x4f(this.runtime.Shader.MVP_MATRIX, this.context.projectionMatrix.val);
+            this.shapes.begin(this.shapesShader);
+            this.activeRenderer = this.shapes;
+        }
+        else {
+            this.activeRenderer = this.skeletonDebugRenderer;
+        }
+    }
+
+    /**
+     * Ends the current active renderer, if any.
+     * Typically used to stop batching before switching renderers.
+     */
+    end() {
+        if (this.activeRenderer === this.batcher) {
+            this.batcher.end();
+        } else if (this.activeRenderer === this.shapes) {
+            this.shapes.end();
+        }
+        this.activeRenderer = null;
+    }
+
+    /**
+     * Disposes of all rendering-related resources to free GPU memory.
+     * Should be called when this Spine object is no longer needed.
+     */
+    dispose() {
+        this.batcher.dispose();
+        this.batcherShader.dispose();
+        this.shapes.dispose();
+        this.shapesShader.dispose();
+        this.skeletonDebugRenderer.dispose();
+    }
+
 
     /**
      * Sets the current animation for a track, discarding any queued animations.
@@ -15784,7 +17297,7 @@ class Spine extends Renderable$1 {
         this.skeleton.setToSetupPose();
         // Spine uses Y-up, melonJS uses Y-down
         this.skeleton.getRootBone().scaleY *= -1;
-        this.skeleton.updateWorldTransform();
+        this.skeleton.updateWorldTransform(Physics.reset);
         // reset flip flags
         this.isSpineFlipped.y = false;
         this.isSpineFlipped.x = false;
